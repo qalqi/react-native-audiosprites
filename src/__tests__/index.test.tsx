@@ -1,5 +1,5 @@
-const { AudioSpritePlayer } = require('../../src');
-const MOCK_MANIFEST = require('./audiosprite.json');
+const { AudioSpritePlayer: AudioSpritePlayerClass } = require('../../src');
+const MOCK_MANIFEST_AUDIO = require('./audiosprite.json');
 
 // --- Mocks ---
 
@@ -42,7 +42,7 @@ const mockFetch = jest.fn();
 
 describe('@audiosprites/player (Web)', () => {
   let audioContext: MockAudioContext;
-  let player: typeof AudioSpritePlayer;
+  let player: typeof AudioSpritePlayerClass;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -52,10 +52,15 @@ describe('@audiosprites/player (Web)', () => {
         return Promise.resolve({
           ok: true,
           url: 'http://localhost/sprite.json',
-          json: () => Promise.resolve(MOCK_MANIFEST),
+          json: () => Promise.resolve(MOCK_MANIFEST_AUDIO),
         });
       }
-      if (url.endsWith('.mp3') || url.endsWith('.ogg') || url.endsWith('.m4a') || url.endsWith('.ac3')) {
+      if (
+        url.endsWith('.mp3') ||
+        url.endsWith('.ogg') ||
+        url.endsWith('.m4a') ||
+        url.endsWith('.ac3')
+      ) {
         return Promise.resolve({
           ok: true,
           url: 'http://localhost/sprite.mp3',
@@ -66,7 +71,7 @@ describe('@audiosprites/player (Web)', () => {
     });
 
     audioContext = new MockAudioContext();
-    player = new AudioSpritePlayer({
+    player = new AudioSpritePlayerClass({
       audioContext: audioContext as any,
       fetch: mockFetch,
     });
@@ -77,10 +82,12 @@ describe('@audiosprites/player (Web)', () => {
 
     expect(mockFetch).toHaveBeenCalledWith('http://localhost/sprite.json');
     // It should fetch the *first* resource from the "resources" array
-    expect(mockFetch).toHaveBeenCalledWith('http://localhost/src/__tests__/audiosprite.ogg');
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://localhost/src/__tests__/audiosprite.ogg'
+    );
 
     expect(audioContext.decodeAudioData).toHaveBeenCalled();
-    expect(player.getManifest()).toEqual(MOCK_MANIFEST);
+    expect(player.getManifest()).toEqual(MOCK_MANIFEST_AUDIO);
   });
 
   it('load() should throw if manifest format is invalid', async () => {

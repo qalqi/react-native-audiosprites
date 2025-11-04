@@ -42,7 +42,9 @@ export class AudioSpritePlayer {
 
       const audioResponse = await this.fetch(audioUrl);
       if (!audioResponse.ok) {
-        throw new Error(`Failed to fetch audio file: ${audioResponse.statusText}`);
+        throw new Error(
+          `Failed to fetch audio file: ${audioResponse.statusText}`
+        );
       }
 
       const arrayBuffer = await audioResponse.arrayBuffer();

@@ -12,40 +12,98 @@ npm install react-native-audiosprites
 
 First, you need to generate an audio sprite and a JSON manifest file using the `audiosprite` tool.
 
+Assuming you have `audiosprite` installed globally:
+
 ```sh
-audiosprite --output my-sprite file1.mp3 file2.mp3 file3.mp3
+audiosprite --output audiosprite --format howler --path ./src/__tests__/ Sound_1.m4a Sound_2.m4a Sound_3.m4a Sound_4.m4a
 ```
 
-This will generate `my-sprite.mp3` and `my-sprite.json`.
+This command will generate `audiosprite.json`, `audiosprite.mp3`, `audiosprite.ogg`, `audiosprite.m4a`, and `audiosprite.ac3` in the `src/__tests__/` directory. The `--path` argument is important as it tells the player where to find the audio files relative to the JSON manifest.
 
 Then, you can use the `AudioSpritePlayer` to play the sounds from the sprite.
 
-```javascript
+### Browser Environment
+
+```typescript
 import { AudioSpritePlayer } from 'react-native-audiosprites';
 
-// In a browser environment
-const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+// Ensure AudioContext is available
+const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+// Use the native fetch API
 const player = new AudioSpritePlayer({
   audioContext,
   fetch: window.fetch.bind(window),
 });
 
-// In a React Native environment
-// You need to provide an implementation for AudioContext and fetch
-// For example, you can use 'react-native-audio-api'
-import { AudioContext } from 'react-native-audio-api';
+async function playSound(soundName: string) {
+  try {
+    // Load the audio sprite manifest and audio files
+    // Adjust the path to your audiosprite.json file
+    await player.load('./src/__tests__/audiosprite.json');
+    console.log('Audio sprite loaded successfully.');
+
+    // Play a sound from the spritemap
+    player.play(soundName);
+    console.log(`Playing sound: ${soundName}`);
+  } catch (error) {
+    console.error('Error playing sound:', error);
+  }
+}
+
+// Example usage:
+playSound('Sound_1');
+// playSound('Sound_2');
+```
+
+### React Native Environment
+
+For React Native, you'll typically need a polyfill or a library that provides `AudioContext` and `fetch` functionality, as these are Web APIs. `react-native-audio-api` is a good option for `AudioContext`. For `fetch`, React Native provides its own global `fetch` implementation.
+
+First, install `react-native-audio-api`:
+
+```sh
+npm install react-native-audio-api
+# or
+yarn add react-native-audio-api
+```
+
+Then, you can use it like this:
+
+```typescript
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+import { AudioContext } from 'react-native-audio-api'; // Import from the library
+
+// Create an instance of AudioContext
 const audioContext = new AudioContext();
+
+// Use the global fetch provided by React Native
 const player = new AudioSpritePlayer({
   audioContext,
-  fetch, // You need to provide a fetch implementation
+  fetch: fetch, // React Native provides a global fetch
 });
 
+async function playRNSound(soundName: string) {
+  try {
+    // Load the audio sprite manifest and audio files
+    // Adjust the path to your audiosprite.json file.
+    // In React Native, you might need to bundle your audio files
+    // and refer to them using a local asset path or a remote URL.
+    // For this example, we assume it's accessible via a URL.
+    await player.load('http://localhost:8081/src/__tests__/audiosprite.json');
+    console.log('React Native Audio sprite loaded successfully.');
 
-// Load the audio sprite
-await player.load('./my-sprite.json');
+    // Play a sound from the spritemap
+    player.play(soundName);
+    console.log(`Playing React Native sound: ${soundName}`);
+  } catch (error) {
+    console.error('Error playing React Native sound:', error);
+  }
+}
 
-// Play a sound
-player.play('file1');
+// Example usage:
+playRNSound('Sound_1');
+// playRNSound('Sound_2');
 ```
 
 ## Contributing
