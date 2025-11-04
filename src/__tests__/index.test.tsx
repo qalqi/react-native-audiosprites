@@ -1,4 +1,5 @@
 const { AudioSpritePlayer } = require('../../src');
+const MOCK_MANIFEST = require('./audiosprite.json');
 
 // --- Mocks ---
 
@@ -37,15 +38,6 @@ class MockAudioContext {
 // Mock fetch
 const mockFetch = jest.fn();
 
-// Mock manifest from 'audiosprite'
-const MOCK_MANIFEST = {
-  resources: ['sprite.mp3', 'sprite.ogg'],
-  spritemap: {
-    coin: { start: 0.5, end: 1.0, loop: false },
-    jump: { start: 1.2, end: 2.0, loop: false },
-  },
-};
-
 // --- Tests ---
 
 describe('@audiosprites/player (Web)', () => {
@@ -63,7 +55,7 @@ describe('@audiosprites/player (Web)', () => {
           json: () => Promise.resolve(MOCK_MANIFEST),
         });
       }
-      if (url.endsWith('.mp3') || url.endsWith('.ogg')) {
+      if (url.endsWith('.mp3') || url.endsWith('.ogg') || url.endsWith('.m4a') || url.endsWith('.ac3')) {
         return Promise.resolve({
           ok: true,
           url: 'http://localhost/sprite.mp3',
@@ -85,7 +77,7 @@ describe('@audiosprites/player (Web)', () => {
 
     expect(mockFetch).toHaveBeenCalledWith('http://localhost/sprite.json');
     // It should fetch the *first* resource from the "resources" array
-    expect(mockFetch).toHaveBeenCalledWith('http://localhost/sprite.mp3');
+    expect(mockFetch).toHaveBeenCalledWith('http://localhost/src/__tests__/audiosprite.ogg');
 
     expect(audioContext.decodeAudioData).toHaveBeenCalled();
     expect(player.getManifest()).toEqual(MOCK_MANIFEST);
@@ -106,43 +98,45 @@ describe('@audiosprites/player (Web)', () => {
 
   it('play() should calculate duration and start source with correct timings', async () => {
     await player.load('http://localhost/sprite.json');
-    player.play('jump');
+    player.play('Sound_1');
 
     expect(audioContext.createBufferSource).toHaveBeenCalledTimes(1);
     const mockSourceResult = audioContext.createBufferSource.mock.results[0];
     if (mockSourceResult) {
       const mockSource = mockSourceResult.value;
       // Check the 'audiosprite' format timings
-      // sound.start = 1.2, sound.end = 2.0
-      // duration = 2.0 - 1.2 = 0.8
-      expect(mockSource.start).toHaveBeenCalledWith(
-        0, // when
-        1.2, // offset (from spritemap.jump.start)
-        0.8 // duration (calculated from end - start)
-      );
+      // sound.start = 0, sound.end = 1.0453514739229024
+      // duration = 1.0453514739229024
+      expect(mockSource.start).toHaveBeenCalledWith(0, 0, expect.any(Number));
+      const duration = mockSource.start.mock.calls[0][2];
+      expect(duration).toBeCloseTo(1.0453514739229024);
     }
   });
 
   it('play() should allow multiple overlapping sounds', async () => {
     await player.load('http://localhost/sprite.json');
 
-    player.play('coin');
-    player.play('jump');
+    player.play('Sound_2');
+    player.play('Sound_3');
 
     expect(audioContext.createBufferSource).toHaveBeenCalledTimes(2);
 
-    // Check timings for 'coin' (start: 0.5, end: 1.0)
+    // Check timings for 'Sound_2' (start: 3, end: 4.008684807256236)
     const source1Result = audioContext.createBufferSource.mock.results[0];
     if (source1Result) {
       const source1 = source1Result.value;
-      expect(source1.start).toHaveBeenCalledWith(0, 0.5, 0.5);
+      expect(source1.start).toHaveBeenCalledWith(0, 3, expect.any(Number));
+      const duration = source1.start.mock.calls[0][2];
+      expect(duration).toBeCloseTo(1.008684807256236);
     }
 
-    // Check timings for 'jump' (start: 1.2, end: 2.0)
+    // Check timings for 'Sound_3' (start: 6, end: 7.045351473922903)
     const source2Result = audioContext.createBufferSource.mock.results[1];
     if (source2Result) {
       const source2 = source2Result.value;
-      expect(source2.start).toHaveBeenCalledWith(0, 1.2, 0.8);
+      expect(source2.start).toHaveBeenCalledWith(0, 6, expect.any(Number));
+      const duration = source2.start.mock.calls[0][2];
+      expect(duration).toBeCloseTo(1.045351473922903);
     }
   });
 
