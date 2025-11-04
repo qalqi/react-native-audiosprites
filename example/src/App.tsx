@@ -1,12 +1,9 @@
-import { Text, View, StyleSheet } from 'react-native';
-import { multiply } from 'react-native-audiosprites';
-
-const result = multiply(3, 7);
+import { StyleSheet, View, Text } from 'react-native';
 
 export default function App() {
   return (
     <View style={styles.container}>
-      <Text>Result: {result}</Text>
+      <Text>Result: </Text>
     </View>
   );
 }
@@ -16,5 +13,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  box: {
+    width: 60,
+    height: 60,
+    marginVertical: 20,
   },
 });
