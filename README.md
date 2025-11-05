@@ -32,14 +32,8 @@ Then, you can use the `AudioSpritePlayer` to play the sounds from the sprite.
 ```typescript
 import { AudioSpritePlayer } from 'react-native-audiosprites';
 
-// Ensure AudioContext is available
-const audioContext = new (window.AudioContext ||
-  (window as any).webkitAudioContext)();
-
-// Use the native fetch API
 const player = new AudioSpritePlayer({
-  audioContext,
-  fetch: window.fetch.bind(window),
+  platform: 'web',
 });
 
 async function playSound(soundName: string) {
@@ -64,100 +58,117 @@ playSound('Sound_1');
 
 ### React Native Environment
 
-For React Native, you'll typically need a polyfill or a library that provides `AudioContext` and `fetch` functionality, as these are Web APIs. `react-native-audio-api` is a good option for `AudioContext`. For `fetch`, React Native provides its own global `fetch` implementation.
+For React Native, you'll need `react-native-audio-api` and `expo-asset` to handle audio playback and asset loading.
 
-First, install `react-native-audio-api`:
+First, install the dependencies:
 
 ```sh
-npm install react-native-audio-api
+npm install react-native-audio-api expo-asset expo-file-system
 # or
-yarn add react-native-audio-api
+yarn add react-native-audio-api expo-asset expo-file-system
 ```
 
-Change metro.config.js as https://docs.swmansion.com/react-native-audio-api/docs/fundamentals/getting-started
+Change `metro.config.js` as per `react-native-audio-api` documentation: https://docs.swmansion.com/react-native-audio-api/docs/fundamentals/getting-started
 
 ```js
 module.exports = wrapWithAudioAPIMetroConfig(config);
 ```
 
-Then, you can use it like this:
+Then, you can use it in your component:
 
 ```typescript
+import { StyleSheet, View, Text, Button, Platform } from 'react-native';
 import { AudioSpritePlayer } from 'react-native-audiosprites';
-import { AudioContext } from 'react-native-audio-api'; // Import from the library
+import { AudioManager, AudioContext } from 'react-native-audio-api';
+import { useEffect, useState, useRef } from 'react';
+import { Asset } from 'expo-asset';
+import { fetch } from 'expo/fetch';
+import manifest from '../assets/audiosprite.json';
 
-// Create an instance of AudioContext
-const audioContext = new AudioContext();
+// Import the audio asset
+const audioAsset = require('../assets/audiosprite.mp3');
 
-// Use the global fetch provided by React Native
-const player = new AudioSpritePlayer({
-  audioContext,
-  fetch: fetch, // React Native provides a global fetch
-  platform: Platform.OS
-});
+export default function App() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const playerRef = useRef<AudioSpritePlayer | null>(null);
 
-async function playRNSound(soundName: string) {
-  try {
-    // Load the audio sprite manifest and audio files
-    // Adjust the path to your audiosprite.json file.
-    // In React Native, you might need to bundle your audio files
-    // and refer to them using a local asset path or a remote URL.
-    // For this example, we assume it's accessible via a URL.
-    await player.load('http://localhost:8081/src/__tests__/audiosprite.json');
-    console.log('React Native Audio sprite loaded successfully.');
+  useEffect(() => {
+    const loadPlayer = async () => {
+      const asset = Asset.fromModule(audioAsset);
+      await asset.downloadAsync();
+      const audioUri = asset.localUri || asset.uri;
 
-    // Play a sound from the spritemap
-    player.play(soundName);
-    console.log(`Playing React Native sound: ${soundName}`);
-  } catch (error) {
-    console.error('Error playing React Native sound:', error);
-  }
+      if (!audioUri) {
+        console.error('Failed to get audio URI.');
+        return;
+      }
+
+      if (Platform.OS === 'ios') {
+        try {
+          await AudioManager.setAudioSessionOptions({
+            iosCategory: 'playback',
+            iosOptions: ['mixWithOthers'],
+          });
+          await AudioManager.setAudioSessionActivity(true);
+        } catch (e) {
+          console.error('Failed to configure AudioSession options:', e);
+        }
+      }
+
+      const audioContext = new AudioContext();
+      const audioPlayer = new AudioSpritePlayer({
+        audioContext,
+        fetch: fetch.bind(globalThis),
+        platform: Platform.OS,
+      });
+
+      try {
+        await audioPlayer.load(manifest, audioUri);
+        playerRef.current = audioPlayer;
+        setIsLoaded(true);
+        console.log('Audio sprite loaded successfully.');
+      } catch (error) {
+        console.error('Failed to load audio sprite:', error);
+      }
+    };
+
+    loadPlayer();
+  }, []);
+
+  const playSound = (soundName: string) => {
+    const player = playerRef.current;
+    if (player && isLoaded) {
+      player.play(soundName);
+      console.log(`Playing sound: ${soundName}`);
+    } else {
+      console.warn('Player not loaded yet.');
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text>AudioSprite Player Example</Text>
+      <Button
+        title="Play Sound 1"
+        onPress={() => playSound('Sound_1')}
+        disabled={!isLoaded}
+      />
+      <Button
+        title="Play Sound 2"
+        onPress={() => playSound('Sound_2')}
+        disabled={!isLoaded}
+      />
+    </View>
+  );
 }
 
-// Example usage:
-playRNSound('Sound_1');
-// playRNSound('Sound_2');
-```
-
-### Loading from local files
-
-You can also load the manifest and audio file from local files by importing them directly. This is useful when you are using a bundler like Webpack or Metro.
-
-```typescript
-import { AudioSpritePlayer } from 'react-native-audiosprites';
-import manifest from './audiosprite.json';
-import audio from './audiosprite.mp3'; // This might require specific bundler configuration to handle audio files
-
-// Assuming 'audio' is an ArrayBuffer or can be converted to one.
-// How you get an ArrayBuffer depends on your environment.
-// For example, in Node.js you can use fs.readFileSync.
-// In a browser with a file input, you can use FileReader.
-
-const audioContext = new (window.AudioContext ||
-  (window as any).webkitAudioContext)();
-
-const player = new AudioSpritePlayer({
-  audioContext,
-  fetch: window.fetch.bind(window), // fetch is still required for the player, but not for loading local files
-  platform: 'web'
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
-
-async function playSound(soundName: string) {
-  try {
-    // Load the audio sprite from the imported manifest and audio buffer
-    await player.load(manifest, audio);
-    console.log('Audio sprite loaded successfully.');
-
-    // Play a sound from the spritemap
-    player.play(soundName);
-    console.log(`Playing sound: ${soundName}`);
-  } catch (error) {
-    console.error('Error playing sound:', error);
-  }
-}
-
-// Example usage:
-playSound('Sound_1');
 ```
 
 ## Contributing
