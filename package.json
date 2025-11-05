@@ -1,6 +1,6 @@
 {
   "name": "react-native-audiosprites",
-  "version": "0.3.0-alpha.0",
+  "version": "0.2.0-alpha.0",
   "description": "audio sprites ",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
