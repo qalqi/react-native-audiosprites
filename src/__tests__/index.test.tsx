@@ -276,7 +276,8 @@ describe('@audiosprites/player (Mobile)', () => {
     player.play('bg_loop');
 
     expect(audioContext.createBufferQueueSource).toHaveBeenCalledTimes(1);
-    const mockSourceResult = audioContext.createBufferQueueSource.mock.results[0];
+    const mockSourceResult =
+      audioContext.createBufferQueueSource.mock.results[0];
     if (mockSourceResult) {
       const mockSource = mockSourceResult.value;
       expect(mockSource.enqueueBuffer).toHaveBeenCalledTimes(1);
@@ -296,7 +297,8 @@ describe('@audiosprites/player (Mobile)', () => {
     await player.load('http://localhost/sprite.json');
     player.play('bg_loop');
 
-    const mockSourceResult = audioContext.createBufferQueueSource.mock.results[0];
+    const mockSourceResult =
+      audioContext.createBufferQueueSource.mock.results[0];
     const mockSource = mockSourceResult.value;
     expect(mockSource.stop).not.toHaveBeenCalled();
 
