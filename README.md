@@ -106,6 +106,45 @@ playRNSound('Sound_1');
 // playRNSound('Sound_2');
 ```
 
+### Loading from local files
+
+You can also load the manifest and audio file from local files by importing them directly. This is useful when you are using a bundler like Webpack or Metro.
+
+```typescript
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+import manifest from './audiosprite.json';
+import audio from './audiosprite.mp3'; // This might require specific bundler configuration to handle audio files
+
+// Assuming 'audio' is an ArrayBuffer or can be converted to one.
+// How you get an ArrayBuffer depends on your environment.
+// For example, in Node.js you can use fs.readFileSync.
+// In a browser with a file input, you can use FileReader.
+
+const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+const player = new AudioSpritePlayer({
+  audioContext,
+  fetch: window.fetch.bind(window), // fetch is still required for the player, but not for loading local files
+});
+
+async function playSound(soundName: string) {
+  try {
+    // Load the audio sprite from the imported manifest and audio buffer
+    await player.load(manifest, audio);
+    console.log('Audio sprite loaded successfully.');
+
+    // Play a sound from the spritemap
+    player.play(soundName);
+    console.log(`Playing sound: ${soundName}`);
+  } catch (error) {
+    console.error('Error playing sound:', error);
+  }
+}
+
+// Example usage:
+playSound('Sound_1');
+```
+
 ## Contributing
 
 - [Development workflow](CONTRIBUTING.md#development-workflow)

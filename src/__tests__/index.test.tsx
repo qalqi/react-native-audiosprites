@@ -157,4 +157,12 @@ describe('@audiosprites/player (Web)', () => {
     );
     consoleWarnSpy.mockRestore();
   });
+
+  it('load() should load from a manifest object and an array buffer', async () => {
+    const arrayBuffer = new ArrayBuffer(8);
+    await player.load(MOCK_MANIFEST_AUDIO, arrayBuffer);
+
+    expect(audioContext.decodeAudioData).toHaveBeenCalledWith(arrayBuffer);
+    expect(player.getManifest()).toEqual(MOCK_MANIFEST_AUDIO);
+  });
 });

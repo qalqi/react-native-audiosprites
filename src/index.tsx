@@ -21,35 +21,57 @@ export class AudioSpritePlayer {
     this.manifest = null;
   }
 
-  async load(jsonPath: string) {
+  async load(json: any, audio?: any) {
     try {
-      const response = await this.fetch(jsonPath);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch manifest: ${response.statusText}`);
+      if (typeof json === 'string') {
+        const response = await this.fetch(json);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch manifest: ${response.statusText}`);
+        }
+        this.manifest = await response.json();
+
+        if (!this.manifest.resources || !this.manifest.spritemap) {
+          throw new Error(
+            'Invalid audiosprite manifest format. Missing "resources" or "spritemap".'
+          );
+        }
+
+        // Find the first supported audio file (e.g., .mp3 or .ogg)
+        // For simplicity, we just take the first one.
+        const audioFileName = this.manifest.resources[0];
+        const audioUrl = new URL(audioFileName, response.url).href;
+
+        const audioResponse = await this.fetch(audioUrl);
+        if (!audioResponse.ok) {
+          throw new Error(
+            `Failed to fetch audio file: ${audioResponse.statusText}`
+          );
+        }
+
+        const arrayBuffer = await audioResponse.arrayBuffer();
+        this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      } else {
+        this.manifest = json;
+        if (!this.manifest.resources || !this.manifest.spritemap) {
+          throw new Error(
+            'Invalid audiosprite manifest format. Missing "resources" or "spritemap".'
+          );
+        }
+
+        let arrayBuffer;
+        if (typeof audio === 'string') {
+          const audioResponse = await this.fetch(audio);
+          if (!audioResponse.ok) {
+            throw new Error(
+              `Failed to fetch audio file: ${audioResponse.statusText}`
+            );
+          }
+          arrayBuffer = await audioResponse.arrayBuffer();
+        } else {
+          arrayBuffer = audio;
+        }
+        this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
       }
-      this.manifest = await response.json();
-
-      if (!this.manifest.resources || !this.manifest.spritemap) {
-        throw new Error(
-          'Invalid audiosprite manifest format. Missing "resources" or "spritemap".'
-        );
-      }
-
-      // Find the first supported audio file (e.g., .mp3 or .ogg)
-      // For simplicity, we just take the first one.
-      const audioFileName = this.manifest.resources[0];
-      const audioUrl = new URL(audioFileName, response.url).href;
-
-      const audioResponse = await this.fetch(audioUrl);
-      if (!audioResponse.ok) {
-        throw new Error(
-          `Failed to fetch audio file: ${audioResponse.statusText}`
-        );
-      }
-
-      const arrayBuffer = await audioResponse.arrayBuffer();
-
-      this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
       console.log('Audio sprite loaded successfully.');
     } catch (error) {
       console.error('Failed to load audio sprite:', error);
