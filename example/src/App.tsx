@@ -1,14 +1,20 @@
-import { StyleSheet, View, Text, Button, Platform } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  Platform,
+  TouchableOpacity,
+} from 'react-native';
 import { AudioSpritePlayer } from '../../src';
 // Assuming the configuration tool is AudioManager or AudioSession
 import { AudioManager, AudioContext } from 'react-native-audio-api';
 import { useEffect, useState, useRef } from 'react';
 import { Asset } from 'expo-asset';
 import { fetch } from 'expo/fetch';
-import manifest from '../assets/audiosprite.json';
+import manifest from '../assets/mygameaudio.json';
 
 // Import the audio asset using require, which gives an Asset object/reference
-const audioAsset = require('../assets/audiosprite.mp3');
+const audioAsset = require('../assets/mygameaudio.mp3');
 
 export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -21,6 +27,19 @@ export default function App() {
   //   audioContextRef.current = new AudioContext();
   // }
 
+  // const audioBufferQueue = audioContextRef.current.createBufferQueueSource();
+  // audioBufferQueue.connect(audioContextRef.current.destination);
+  // audioBufferQueue.start(audioContextRef.current.currentTime);
+  // audioBufferQueue.onEnded = (event) => {
+  //   console.log(event.bufferId, 'bufferId', event.isLast);
+  //   //setting callback
+  //   if (event.bufferId === undefined) {
+  //     console.log('queue source node has been stopped');
+  //   } else {
+  //     console.log(`buffer with id ${event.bufferId} ended`);
+  //   }
+  // };
+
   useEffect(() => {
     const loadAudioAsset = async () => {
       const asset = Asset.fromModule(audioAsset);
@@ -31,6 +50,7 @@ export default function App() {
         console.error('Failed to get audio URI.');
         return;
       }
+      console.log('audioUri: ', audioUri);
       setAudiouri(audioUri);
     };
 
@@ -52,7 +72,7 @@ export default function App() {
       try {
         await AudioManager.setAudioSessionOptions({
           iosCategory: 'playback',
-          iosOptions: ['mixWithOthers'],
+          iosOptions: ['mixWithOthers', 'duckOthers'],
           iosAllowHaptics: false,
         });
         // 🚨 CRITICAL: Activate the session immediately after configuring
@@ -104,31 +124,60 @@ export default function App() {
     }
   };
 
+  const stopBGM = () => {
+    const player = playerRef.current;
+    if (player) {
+      player.stop();
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text>Initialize with explicit user input - Autoplay Policy</Text>
-      <Button
-        title="Load Player"
+      <TouchableOpacity
         onPress={() => loadPlayer()}
-        disabled={!audiouri || isLoaded}
-      />
+        style={!audiouri ? styles.buttonDisabled : styles.button}
+        disabled={!audiouri}
+      >
+        <Text style={styles.buttonText}>Load Player</Text>
+      </TouchableOpacity>
       <Text>AudioSprite Player Example</Text>
 
-      <Button
-        title="Play Sound 1"
+      <TouchableOpacity
         onPress={() => playSound('Sound_1')}
+        style={isLoaded ? styles.button : styles.buttonDisabled}
         disabled={!isLoaded}
-      />
-      <Button
-        title="Play Sound 2"
+      >
+        <Text style={styles.buttonText}>Play Sound 1</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => playSound('Sound_2')}
+        style={isLoaded ? styles.button : styles.buttonDisabled}
         disabled={!isLoaded}
-      />
-      <Button
-        title="Play Sound 3"
+      >
+        <Text style={styles.buttonText}>Play Sound 2</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => playSound('Sound_3')}
+        style={isLoaded ? styles.button : styles.buttonDisabled}
         disabled={!isLoaded}
-      />
+      >
+        <Text style={styles.buttonText}>Play Sound 3</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('bg_loop')}
+        style={isLoaded ? styles.button : styles.buttonDisabled}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Play Background Loop</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={stopBGM}
+        style={isLoaded ? styles.button : styles.buttonDisabled}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Stop BGM</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -138,5 +187,22 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  button: {
+    backgroundColor: '#8a9ddbff',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+  },
+  buttonDisabled: {
+    backgroundColor: '#6c6c6cff',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+    userSelect: 'none',
+  },
+  buttonText: {
+    color: '#000000',
+    textAlign: 'center',
   },
 });

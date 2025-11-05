@@ -22,10 +22,22 @@ First, you need to generate an audio sprite and a JSON manifest file using the `
 Assuming you have [`audiosprite`](https://www.npmjs.com/package/audiosprite) installed globally:
 
 ```sh
-audiosprite --output audiosprite --format howler --path ./src/__tests__/ Sound_1.m4a Sound_2.m4a Sound_3.m4a Sound_4.m4a
+audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg_loop" src/__tests__/sounds/bg_loop.wav src/__tests__/sounds/Sound_1.m4a src/__tests__/sounds/Sound_2.m4a src/__tests__/sounds/Sound_3.m4a src/__tests__/sounds/Sound_4.m4a
 ```
 
-This command will generate `audiosprite.json`, `audiosprite.mp3`, `audiosprite.ogg`, `audiosprite.m4a`, and `audiosprite.ac3` in the `src/__tests__/` directory. The `--path` argument is important as it tells the player where to find the audio files relative to the JSON manifest.
+This command will generate `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a`, and `mygameaudio.ac3` in the `src/__tests__/sounds/` directory.
+
+### Looping Sounds
+
+You can create looping sounds by using the `--loop` option with the `audiosprite` command. The value of the `--loop` option should be the name of the sound you want to loop.
+
+For example, to loop the `bg_music` sound, you would use the following command:
+
+```sh
+audiosprite --output audiosprite --format howler --loop "bg_music" --path ./src/__tests__/ Sound_1.m4a Sound_2.m4a Sound_3.m4a Sound_4.m4a bg_music.wav
+```
+
+When you play a looping sound, it will play continuously until you stop it using the `player.stop()` method. The looping functionality is supported on both web and mobile platforms.
 
 Then, you can use the `AudioSpritePlayer` to play the sounds from the sprite.
 
@@ -42,7 +54,7 @@ async function playSound(soundName: string) {
   try {
     // Load the audio sprite manifest and audio files
     // Adjust the path to your audiosprite.json file
-    await player.load('./src/__tests__/audiosprite.json');
+    await player.load('./src/__tests__/sounds/mygameaudio.json');
     console.log('Audio sprite loaded successfully.');
 
     // Play a sound from the spritemap
@@ -53,9 +65,16 @@ async function playSound(soundName: string) {
   }
 }
 
+function stopSound() {
+  player.stop();
+  console.log('Stopped looping sound.');
+}
+
 // Example usage:
 playSound('Sound_1');
 // playSound('Sound_2');
+// To stop a looping sound:
+// stopSound();
 ```
 
 ### React Native Environment
@@ -79,16 +98,16 @@ module.exports = wrapWithAudioAPIMetroConfig(config);
 Then, you can use it in your component:
 
 ```typescript
-import { StyleSheet, View, Text, Button, Platform } from 'react-native';
+import { StyleSheet, View, Text, Platform, TouchableOpacity } from 'react-native';
 import { AudioSpritePlayer } from 'react-native-audiosprites';
 import { AudioManager, AudioContext } from 'react-native-audio-api';
 import { useEffect, useState, useRef } from 'react';
 import { Asset } from 'expo-asset';
 import { fetch } from 'expo/fetch';
-import manifest from '../assets/audiosprite.json';
+import manifest from '../assets/mygameaudio.json';
 
 // Import the audio asset
-const audioAsset = require('../assets/audiosprite.mp3');
+const audioAsset = require('../assets/mygameaudio.mp3');
 
 export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -147,19 +166,51 @@ export default function App() {
     }
   };
 
+  const stopBGM = () => {
+    const player = playerRef.current;
+    if (player) {
+      player.stop();
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text>AudioSprite Player Example</Text>
-      <Button
-        title="Play Sound 1"
+      <TouchableOpacity
+        onPress={() => loadPlayer()}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Load Player</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => playSound('Sound_1')}
+        style={styles.button}
         disabled={!isLoaded}
-      />
-      <Button
-        title="Play Sound 2"
+      >
+        <Text style={styles.buttonText}>Play Sound 1</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => playSound('Sound_2')}
+        style={styles.button}
         disabled={!isLoaded}
-      />
+      >
+        <Text style={styles.buttonText}>Play Sound 2</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('bg_loop')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Play Background Loop</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={stopBGM}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Stop BGM</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -170,8 +221,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  button: {
+    backgroundColor: '#DDDDDD',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#000000',
+    textAlign: 'center',
+  },
 });
 ```
+
+## Inspiration
+
+https://github.com/goldfire/howler.js
+Generated json also works with new Howl({
+sprite: {
+key1: [offset, duration, (loop)]
+},
+});
 
 ## Contributing
 
@@ -183,6 +253,8 @@ const styles = StyleSheet.create({
 
 MIT
 
----
+## Credits
+
+[Shaker, Woda, Conga, Bongo, Templeblock.wav](https://freesound.org/people/kwazi/sounds/34115/) by [kwazi](https://freesound.org/people/kwazi/) | License: [Attribution 3.0](http://creativecommons.org/licenses/by/3.0/)
 
 Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)

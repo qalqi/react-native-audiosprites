@@ -1,0 +1,19 @@
+{
+  "urls": [
+    "src/__tests__/sounds/audiosprite.ogg",
+    "src/__tests__/sounds/audiosprite.m4a",
+    "src/__tests__/sounds/audiosprite.mp3",
+    "src/__tests__/sounds/audiosprite.ac3"
+  ],
+  "sprite": {
+    "Sound_1": [0, 1045.3514739229024],
+    "Sound_2": [3000, 1008.6848072562358],
+    "Sound_3": [6000, 1045.3514739229029],
+    "Sound_4": [9000, 1001.3378684807251],
+    "34115__kwazi__shaker-woda-conga-bongo-templeblock": [
+      12000,
+      34439.47845804988,
+      true
+    ]
+  }
+}

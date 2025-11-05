@@ -1,0 +1,15 @@
+{
+  "urls": [
+    "src/__tests__/sounds/mygameaudio.ogg",
+    "src/__tests__/sounds/mygameaudio.m4a",
+    "src/__tests__/sounds/mygameaudio.mp3",
+    "src/__tests__/sounds/mygameaudio.ac3"
+  ],
+  "sprite": {
+    "bg_loop": [0, 34439.47845804988, true],
+    "Sound_1": [36000, 1045.3514739228992],
+    "Sound_2": [39000, 1008.6848072562375],
+    "Sound_3": [42000, 1045.3514739228992],
+    "Sound_4": [45000, 1001.3378684807251]
+  }
+}
