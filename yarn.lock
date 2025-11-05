@@ -6512,6 +6512,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"expo-audio@npm:~1.0.14":
+  version: 1.0.14
+  resolution: "expo-audio@npm:1.0.14"
+  peerDependencies:
+    expo: "*"
+    expo-asset: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 9198596eb0cd5b6273f6eb4559c5dde2adbcbc9ff6b6a0a8a25354e5a17ad75fdabf791a701e0f9f93a8a20ccdb887617e0e2db2f83fe900e23a7020db4702fd
+  languageName: node
+  linkType: hard
+
 "expo-constants@npm:~18.0.10, expo-constants@npm:~18.0.9":
   version: 18.0.10
   resolution: "expo-constants@npm:18.0.10"
@@ -11128,10 +11140,13 @@ __metadata:
   dependencies:
     "@expo/metro-runtime": ~6.1.2
     expo: ~54.0.22
+    expo-asset: ~12.0.9
+    expo-audio: ~1.0.14
     expo-status-bar: ~3.0.8
     react: 19.1.0
     react-dom: 19.1.0
     react-native: 0.81.5
+    react-native-audio-api: ^0.9.3
     react-native-builder-bob: ^0.40.13
     react-native-monorepo-config: ^0.1.9
     react-native-web: ~0.21.0

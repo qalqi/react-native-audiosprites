@@ -1,10 +1,5 @@
 {
-  "resources": [
-    "src/__tests__/audiosprite.ogg",
-    "src/__tests__/audiosprite.m4a",
-    "src/__tests__/audiosprite.mp3",
-    "src/__tests__/audiosprite.ac3"
-  ],
+  "resources": ["audiosprite.mp3"],
   "spritemap": {
     "Sound_1": {
       "start": 0,
