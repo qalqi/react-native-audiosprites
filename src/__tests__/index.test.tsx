@@ -28,8 +28,26 @@ class MockAudioContext {
   state = 'running';
   createBufferSource = jest.fn(() => new MockBufferSourceNode(this));
   createGain = jest.fn(() => new MockGainNode(this));
+  createBuffer = jest.fn((numberOfChannels, length) => ({
+    numberOfChannels,
+    length,
+    sampleRate: 44100,
+    getChannelData: () => new Float32Array(length),
+  }));
   decodeAudioData = jest.fn((_buffer, cb) =>
-    cb ? cb('mock-decoded-buffer') : Promise.resolve('mock-decoded-buffer')
+    cb
+      ? cb({
+          numberOfChannels: 2,
+          length: 44100,
+          sampleRate: 44100,
+          getChannelData: () => new Float32Array(44100),
+        })
+      : Promise.resolve({
+          numberOfChannels: 2,
+          length: 44100,
+          sampleRate: 44100,
+          getChannelData: () => new Float32Array(44100),
+        })
   );
   resume = jest.fn().mockResolvedValue(undefined);
   destination = 'mock-destination';
@@ -74,6 +92,7 @@ describe('@audiosprites/player (Web)', () => {
     player = new AudioSpritePlayerClass({
       audioContext: audioContext as any,
       fetch: mockFetch,
+      platform: 'web',
     });
   });
 
