@@ -43,8 +43,24 @@
   },
   "keywords": [
     "react-native",
+    "audio",
+    "audiosprite",
+    "audio-sprite",
+    "sound-sprite",
+    "sound-effects",
+    "sfx",
+    "game-audio",
+    "playback",
+    "optimization",
+    "performance",
+    "asset-bundling",
+    "sound-management",
     "ios",
-    "android"
+    "android",
+    "web",
+    "game",
+    "music",
+    "cross-platform"
   ],
   "repository": {
     "type": "git",
