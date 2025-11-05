@@ -37,7 +37,7 @@ For example, to loop the `bg_music` sound, you would use the following command:
 audiosprite --output audiosprite --format howler --loop "bg_music" --path ./src/__tests__/ Sound_1.m4a Sound_2.m4a Sound_3.m4a Sound_4.m4a bg_music.wav
 ```
 
-When you play a looping sound, it will play continuously until you stop it. The looping functionality is supported on both web and mobile platforms.
+When you play a looping sound, it will play continuously until you stop it using the `player.stop()` method. The looping functionality is supported on both web and mobile platforms.
 
 Then, you can use the `AudioSpritePlayer` to play the sounds from the sprite.
 
@@ -65,9 +65,16 @@ async function playSound(soundName: string) {
   }
 }
 
+function stopSound() {
+  player.stop();
+  console.log('Stopped looping sound.');
+}
+
 // Example usage:
 playSound('Sound_1');
 // playSound('Sound_2');
+// To stop a looping sound:
+// stopSound();
 ```
 
 ### React Native Environment
@@ -91,7 +98,7 @@ module.exports = wrapWithAudioAPIMetroConfig(config);
 Then, you can use it in your component:
 
 ```typescript
-import { StyleSheet, View, Text, Button, Platform } from 'react-native';
+import { StyleSheet, View, Text, Platform, TouchableOpacity } from 'react-native';
 import { AudioSpritePlayer } from 'react-native-audiosprites';
 import { AudioManager, AudioContext } from 'react-native-audio-api';
 import { useEffect, useState, useRef } from 'react';
@@ -159,24 +166,51 @@ export default function App() {
     }
   };
 
+  const stopBGM = () => {
+    const player = playerRef.current;
+    if (player) {
+      player.stop();
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text>AudioSprite Player Example</Text>
-      <Button
-        title="Play Sound 1"
+      <TouchableOpacity
+        onPress={() => loadPlayer()}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Load Player</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => playSound('Sound_1')}
+        style={styles.button}
         disabled={!isLoaded}
-      />
-      <Button
-        title="Play Sound 2"
+      >
+        <Text style={styles.buttonText}>Play Sound 1</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => playSound('Sound_2')}
+        style={styles.button}
         disabled={!isLoaded}
-      />
-      <Button
-        title="Play Background Loop"
+      >
+        <Text style={styles.buttonText}>Play Sound 2</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => playSound('bg_loop')}
+        style={styles.button}
         disabled={!isLoaded}
-      />
+      >
+        <Text style={styles.buttonText}>Play Background Loop</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={stopBGM}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Stop BGM</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -186,6 +220,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  button: {
+    backgroundColor: '#DDDDDD',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#000000',
+    textAlign: 'center',
   },
 });
 ```
@@ -211,8 +255,6 @@ MIT
 
 ## Credits
 
----
-
-<a href="https://freesound.org/people/kwazi/sounds/34115/">Shaker, Woda, Conga, Bongo, Templeblock.wav</a> by <a href="https://freesound.org/people/kwazi/">kwazi</a> | License: <a href="http://creativecommons.org/licenses/by/3.0/">Attribution 3.0</a>
+[Shaker, Woda, Conga, Bongo, Templeblock.wav](https://freesound.org/people/kwazi/sounds/34115/) by [kwazi](https://freesound.org/people/kwazi/) | License: [Attribution 3.0](http://creativecommons.org/licenses/by/3.0/)
 
 Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)

@@ -240,11 +240,19 @@ export class AudioSpritePlayer {
         // Always use AudioBufferQueueSourceNode
         source = this.audioContext.createBufferQueueSource();
         source.enqueueBuffer(spriteBuffer);
-        // run a while loop until stop()
-        source.loop = true;
-        source.loopStart = sound[0] / 1000; // Convert ms to seconds
-        source.loopEnd = (sound[0] + sound[1]) / 1000; // Convert ms to seconds
         source.connect(this.audioContext.destination);
+
+        // Manual looping using onEnded
+        const loopHandler = () => {
+          // Only re-enqueue if this is still the active looping source
+          if (this.loopingSource === source) {
+            source.enqueueBuffer(spriteBuffer);
+            // Restart the source immediately after re-enqueueing
+            source.start(0);
+          }
+        };
+        source.onEnded = loopHandler;
+
         source.start(0); // Start immediately
         this.loopingSource = source; // Store reference to looping source
       } else {

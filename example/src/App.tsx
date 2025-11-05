@@ -22,10 +22,23 @@ export default function App() {
   // 🚨 CHANGE 1: Use useRef to store the player instance, bypassing useState instability
   const playerRef = useRef<AudioSpritePlayer | null>(null);
 
-  // const audioContextRef = useRef<AudioContext | null>(null);
-  // if (!audioContextRef.current) {
-  //   audioContextRef.current = new AudioContext();
-  // }
+  const audioContextRef = useRef<AudioContext | null>(null);
+  if (!audioContextRef.current) {
+    audioContextRef.current = new AudioContext();
+  }
+
+  const audioBufferQueue = audioContextRef.current.createBufferQueueSource();
+  audioBufferQueue.connect(audioContextRef.current.destination);
+  audioBufferQueue.start(audioContextRef.current.currentTime);
+  audioBufferQueue.onEnded = (event) => {
+    console.log(event.bufferId, 'bufferId', event.isLast);
+    //setting callback
+    if (event.bufferId === undefined) {
+      console.log('queue source node has been stopped');
+    } else {
+      console.log(`buffer with id ${event.bufferId} ended`);
+    }
+  };
 
   useEffect(() => {
     const loadAudioAsset = async () => {
@@ -128,7 +141,7 @@ export default function App() {
       >
         <Text style={styles.buttonText}>Load Player</Text>
       </TouchableOpacity>
-      <Text style={{ paddingVertical: 3 }}>AudioSprite Player Example</Text>
+      <Text>AudioSprite Player Example</Text>
 
       <TouchableOpacity
         onPress={() => playSound('Sound_1')}
