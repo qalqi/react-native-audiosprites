@@ -5,10 +5,10 @@ import { AudioManager, AudioContext } from 'react-native-audio-api';
 import { useEffect, useState, useRef } from 'react';
 import { Asset } from 'expo-asset';
 import { fetch } from 'expo/fetch';
-import manifest from '../assets/audiosprite.json';
+import manifest from '../assets/mygameaudio.json';
 
 // Import the audio asset using require, which gives an Asset object/reference
-const audioAsset = require('../assets/audiosprite.mp3');
+const audioAsset = require('../assets/mygameaudio.mp3');
 
 export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -127,6 +127,11 @@ export default function App() {
       <Button
         title="Play Sound 3"
         onPress={() => playSound('Sound_3')}
+        disabled={!isLoaded}
+      />
+      <Button
+        title="Play Background Loop"
+        onPress={() => playSound('bg_loop')}
         disabled={!isLoaded}
       />
     </View>

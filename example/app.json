@@ -27,10 +27,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-asset",
-      "react-native-audio-api",
-      "expo-audio"
-    ]
+    "plugins": ["expo-asset", "react-native-audio-api", "expo-audio"]
   }
 }

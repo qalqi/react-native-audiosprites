@@ -67,8 +67,8 @@ export class AudioSpritePlayer {
     const numChannels = this.audioBuffer.numberOfChannels;
     this.spriteBufferCache = {};
 
-    for (const soundName in this.manifest.spritemap) {
-      const sound = this.manifest.spritemap[soundName];
+    for (const soundName in this.manifest.sprite) {
+      const sound = this.manifest.sprite[soundName];
 
       // Calculate frame indices
       const startFrame = Math.floor(sound.start * sampleRate);
@@ -116,13 +116,13 @@ export class AudioSpritePlayer {
         }
         this.manifest = await response.json();
 
-        if (!this.manifest.resources || !this.manifest.spritemap) {
+        if (!this.manifest.urls || !this.manifest.sprite) {
           throw new Error(
-            'Invalid audiosprite manifest format. Missing "resources" or "spritemap".'
+            'Invalid audiosprite manifest format. Missing "urls" or "sprite".'
           );
         }
 
-        const audioFileName = this.manifest.resources[0];
+        const audioFileName = this.manifest.urls[0];
         const audioUrl = new URL(audioFileName, response.url).href;
 
         const audioResponse = await this.fetch(audioUrl);
@@ -136,9 +136,9 @@ export class AudioSpritePlayer {
         decodedBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
       } else {
         this.manifest = json;
-        if (!this.manifest.resources || !this.manifest.spritemap) {
+        if (!this.manifest.urls || !this.manifest.sprite) {
           throw new Error(
-            'Invalid audiosprite manifest format. Missing "resources" or "spritemap".'
+            'Invalid audiosprite manifest format. Missing "urls" or "sprite".'
           );
         }
 
@@ -183,13 +183,13 @@ export class AudioSpritePlayer {
       });
     }
 
-    const sound = this.manifest.spritemap[soundName];
+    const sound = this.manifest.sprite[soundName];
     if (!sound) {
       console.warn(`Sound "${soundName}" not found in spritemap.`);
       return;
     }
 
-    const duration = sound.end - sound.start;
+    const duration = sound[1];
     if (duration <= 0) {
       console.warn(`Sound "${soundName}" has invalid duration.`);
       return;
@@ -215,15 +215,24 @@ export class AudioSpritePlayer {
         return;
       }
 
-      source = this.audioContext.createBufferQueueSource();
+      const loop = sound[2];
 
-      // Mobile Implementation: Enqueue the specific, short sprite buffer
-      source.enqueueBuffer(spriteBuffer);
-
-      source.connect(this.audioContext.destination);
-
-      // This will play the short buffer from its start to its end.
-      source.start(1);
+      if (loop) {
+        // For looping sounds on mobile, use AudioBufferSourceNode
+        source = this.audioContext.createBufferSource();
+        source.buffer = spriteBuffer;
+        source.loop = true;
+        source.loopStart = sound[0] / 1000; // Convert ms to seconds
+        source.loopEnd = (sound[0] + sound[1]) / 1000; // Convert ms to seconds
+        source.connect(this.audioContext.destination);
+        source.start(0); // Start immediately
+      } else {
+        // For non-looping sounds on mobile, use AudioBufferQueueSourceNode
+        source = this.audioContext.createBufferQueueSource();
+        source.enqueueBuffer(spriteBuffer);
+        source.connect(this.audioContext.destination);
+        source.start(1);
+      }
     } else {
       // 🌐 WEB LOGIC (Standard Web Audio API)
       source = this.audioContext.createBufferSource();
@@ -238,11 +247,18 @@ export class AudioSpritePlayer {
       source.buffer = this.audioBuffer;
       source.connect(this.audioContext.destination);
 
+      const loop = sound[2]; // audiosprite stores loop as the third element in the array
+      if (loop) {
+        source.loop = true;
+        source.loopStart = sound[0] / 1000; // Convert ms to seconds
+        source.loopEnd = (sound[0] + sound[1]) / 1000; // Convert ms to seconds
+      }
+
       // Use the 'audiosprite' format: start(when, offset, duration)
       source.start(
         0, // Start playing now
-        sound.start, // The offset
-        duration // The calculated duration
+        sound[0] / 1000, // The offset in seconds
+        sound[1] / 1000 // The calculated duration in seconds
       );
     }
 

@@ -16,6 +16,9 @@ class MockGainNode {
 class MockBufferSourceNode {
   context: MockAudioContext;
   buffer: null;
+  loop = false;
+  loopStart = 0;
+  loopEnd = 0;
   constructor(ctx: MockAudioContext) {
     this.context = ctx;
     this.buffer = null;
@@ -51,6 +54,17 @@ class MockAudioContext {
   );
   resume = jest.fn().mockResolvedValue(undefined);
   destination = 'mock-destination';
+  createBufferQueueSource = jest.fn(() => new MockBufferQueueSourceNode(this));
+}
+
+class MockBufferQueueSourceNode {
+  context: MockAudioContext;
+  constructor(ctx: MockAudioContext) {
+    this.context = ctx;
+  }
+  enqueueBuffer = jest.fn();
+  connect = jest.fn();
+  start = jest.fn();
 }
 
 // Mock fetch
@@ -102,7 +116,7 @@ describe('@audiosprites/player (Web)', () => {
     expect(mockFetch).toHaveBeenCalledWith('http://localhost/sprite.json');
     // It should fetch the *first* resource from the "resources" array
     expect(mockFetch).toHaveBeenCalledWith(
-      'http://localhost/src/__tests__/audiosprite.ogg'
+      'http://localhost/src/__tests__/sounds/mygameaudio.ogg'
     );
 
     expect(audioContext.decodeAudioData).toHaveBeenCalled();
@@ -133,7 +147,7 @@ describe('@audiosprites/player (Web)', () => {
       // Check the 'audiosprite' format timings
       // sound.start = 0, sound.end = 1.0453514739229024
       // duration = 1.0453514739229024
-      expect(mockSource.start).toHaveBeenCalledWith(0, 0, expect.any(Number));
+      expect(mockSource.start).toHaveBeenCalledWith(0, 36, expect.any(Number));
       const duration = mockSource.start.mock.calls[0][2];
       expect(duration).toBeCloseTo(1.0453514739229024);
     }
@@ -147,20 +161,20 @@ describe('@audiosprites/player (Web)', () => {
 
     expect(audioContext.createBufferSource).toHaveBeenCalledTimes(2);
 
-    // Check timings for 'Sound_2' (start: 3, end: 4.008684807256236)
+    // Check timings for 'Sound_2' (start: 39, end: 40.008684807256236)
     const source1Result = audioContext.createBufferSource.mock.results[0];
     if (source1Result) {
       const source1 = source1Result.value;
-      expect(source1.start).toHaveBeenCalledWith(0, 3, expect.any(Number));
+      expect(source1.start).toHaveBeenCalledWith(0, 39, expect.any(Number));
       const duration = source1.start.mock.calls[0][2];
       expect(duration).toBeCloseTo(1.008684807256236);
     }
 
-    // Check timings for 'Sound_3' (start: 6, end: 7.045351473922903)
+    // Check timings for 'Sound_3' (start: 42, end: 43.045351473922903)
     const source2Result = audioContext.createBufferSource.mock.results[1];
     if (source2Result) {
       const source2 = source2Result.value;
-      expect(source2.start).toHaveBeenCalledWith(0, 6, expect.any(Number));
+      expect(source2.start).toHaveBeenCalledWith(0, 42, expect.any(Number));
       const duration = source2.start.mock.calls[0][2];
       expect(duration).toBeCloseTo(1.045351473922903);
     }
@@ -177,11 +191,78 @@ describe('@audiosprites/player (Web)', () => {
     consoleWarnSpy.mockRestore();
   });
 
+  it('play() should handle looping sounds', async () => {
+    await player.load('http://localhost/sprite.json');
+    player.play('bg_loop');
+
+    expect(audioContext.createBufferSource).toHaveBeenCalledTimes(1);
+    const mockSourceResult = audioContext.createBufferSource.mock.results[0];
+    if (mockSourceResult) {
+      const mockSource = mockSourceResult.value;
+      expect(mockSource.loop).toBe(true);
+      expect(mockSource.loopStart).toBe(0);
+      expect(mockSource.loopEnd).toBeCloseTo(34.43947845804988);
+    }
+  });
+
   it('load() should load from a manifest object and an array buffer', async () => {
     const arrayBuffer = new ArrayBuffer(8);
     await player.load(MOCK_MANIFEST_AUDIO, arrayBuffer);
 
     expect(audioContext.decodeAudioData).toHaveBeenCalledWith(arrayBuffer);
     expect(player.getManifest()).toEqual(MOCK_MANIFEST_AUDIO);
+  });
+});
+
+describe('@audiosprites/player (Mobile)', () => {
+  let audioContext: MockAudioContext;
+  let player: typeof AudioSpritePlayerClass;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    mockFetch.mockImplementation((url) => {
+      if (url.endsWith('.json')) {
+        return Promise.resolve({
+          ok: true,
+          url: 'http://localhost/sprite.json',
+          json: () => Promise.resolve(MOCK_MANIFEST_AUDIO),
+        });
+      }
+      if (
+        url.endsWith('.mp3') ||
+        url.endsWith('.ogg') ||
+        url.endsWith('.m4a') ||
+        url.endsWith('.ac3')
+      ) {
+        return Promise.resolve({
+          ok: true,
+          url: 'http://localhost/sprite.mp3',
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+        });
+      }
+      return Promise.reject(new Error('Unknown URL'));
+    });
+
+    audioContext = new MockAudioContext();
+    player = new AudioSpritePlayerClass({
+      audioContext: audioContext as any,
+      fetch: mockFetch,
+      platform: 'ios',
+    });
+  });
+
+  it('play() should handle looping sounds', async () => {
+    await player.load('http://localhost/sprite.json');
+    player.play('bg_loop');
+
+    expect(audioContext.createBufferSource).toHaveBeenCalledTimes(1);
+    const mockSourceResult = audioContext.createBufferSource.mock.results[0];
+    if (mockSourceResult) {
+      const mockSource = mockSourceResult.value;
+      expect(mockSource.loop).toBe(true);
+      expect(mockSource.loopStart).toBe(0);
+      expect(mockSource.loopEnd).toBeCloseTo(34.43947845804988);
+    }
   });
 });
