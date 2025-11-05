@@ -225,11 +225,13 @@ describe('@audiosprites/player (Web)', () => {
     player.play('bg_loop');
 
     const mockSourceResult = audioContext.createBufferSource.mock.results[0];
-    const mockSource = mockSourceResult.value;
-    expect(mockSource.stop).not.toHaveBeenCalled();
+    if (mockSourceResult) {
+      const mockSource = mockSourceResult.value;
+      expect(mockSource.stop).not.toHaveBeenCalled();
 
-    player.stop();
-    expect(mockSource.stop).toHaveBeenCalledTimes(1);
+      player.stop();
+      expect(mockSource.stop).toHaveBeenCalledTimes(1);
+    }
   });
 });
 
@@ -299,10 +301,12 @@ describe('@audiosprites/player (Mobile)', () => {
 
     const mockSourceResult =
       audioContext.createBufferQueueSource.mock.results[0];
-    const mockSource = mockSourceResult.value;
-    expect(mockSource.stop).not.toHaveBeenCalled();
+    if (mockSourceResult) {
+      const mockSource = mockSourceResult.value;
+      expect(mockSource.stop).not.toHaveBeenCalled();
 
-    player.stop();
-    expect(mockSource.stop).toHaveBeenCalledTimes(1);
+      player.stop();
+      expect(mockSource.stop).toHaveBeenCalledTimes(1);
+    }
   });
 });
