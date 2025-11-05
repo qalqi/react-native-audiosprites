@@ -11,6 +11,7 @@ export class AudioSpritePlayer {
   platform: string;
   // Cache for the small, pre-split AudioBuffers used by mobile's QueueSourceNode
   private spriteBufferCache: Record<string, any> = {};
+  private loopingSource: any | null = null;
 
   constructor({
     audioContext,
@@ -57,9 +58,28 @@ export class AudioSpritePlayer {
   /**
    * Caches pre-split AudioBuffers for each sprite, which is necessary
    * for stable playback on mobile using the BufferQueueSourceNode.
+   *
+   * This method iterates through the audio sprite manifest and creates a separate
+   * AudioBuffer for each sound sprite. These smaller buffers are then stored
+   * in `this.spriteBufferCache` for efficient playback on mobile platforms,
+   * especially when using `AudioBufferQueueSourceNode`.
+   *
+   * The `audiosprite` manifest is expected to have the following structure for each sprite:
+   * `[start_time_ms, duration_ms, loop_boolean (optional)]`
+   *
+   * @example
+   * // Example audiosprite manifest structure:
+   * {
+   *   "urls": ["audio.mp3", "audio.ogg"],
+   *   "sprite": {
+   *     "sound1": [0, 1000, false],       // start at 0ms, duration 1000ms, no loop
+   *     "sound2": [1500, 500, true],      // start at 1500ms, duration 500ms, loop
+   *     "background": [2000, 30000, true] // start at 2000ms, duration 30000ms, loop
+   *   }
+   * }
    */
   private _cacheSpriteBuffers() {
-    if (!this.audioBuffer || !this.manifest || this.platform === 'web') {
+    if (!this.audioBuffer || !this.manifest) {
       return; // Only necessary for mobile platforms
     }
 
@@ -70,9 +90,9 @@ export class AudioSpritePlayer {
     for (const soundName in this.manifest.sprite) {
       const sound = this.manifest.sprite[soundName];
 
-      // Calculate frame indices
-      const startFrame = Math.floor(sound.start * sampleRate);
-      const endFrame = Math.ceil(sound.end * sampleRate);
+      // Calculate frame indices based on audiosprite format: [start, duration, loop]
+      const startFrame = Math.floor((sound[0] * sampleRate) / 1000); // Convert ms to frames
+      const endFrame = Math.ceil(((sound[0] + sound[1]) * sampleRate) / 1000); // Convert ms to frames
       const durationFrames = endFrame - startFrame;
 
       if (durationFrames <= 0) {
@@ -196,11 +216,10 @@ export class AudioSpritePlayer {
     }
 
     let source: any;
+    const spriteBuffer = this.spriteBufferCache[soundName];
 
     // 🚨 MOBILE LOGIC: Use AudioBufferQueueSourceNode with cached split buffer
     if (this.platform !== 'web') {
-      const spriteBuffer = this.spriteBufferCache[soundName];
-
       if (!spriteBuffer) {
         console.error(
           `RNAS Error: Split buffer for "${soundName}" not found in cache.`
@@ -218,20 +237,23 @@ export class AudioSpritePlayer {
       const loop = sound[2];
 
       if (loop) {
-        // For looping sounds on mobile, use AudioBufferSourceNode
-        source = this.audioContext.createBufferSource();
-        source.buffer = spriteBuffer;
+        // Always use AudioBufferQueueSourceNode
+        source = this.audioContext.createBufferQueueSource();
+        source.enqueueBuffer(spriteBuffer);
+        // run a while loop until stop()
         source.loop = true;
         source.loopStart = sound[0] / 1000; // Convert ms to seconds
         source.loopEnd = (sound[0] + sound[1]) / 1000; // Convert ms to seconds
         source.connect(this.audioContext.destination);
         source.start(0); // Start immediately
+        this.loopingSource = source; // Store reference to looping source
       } else {
         // For non-looping sounds on mobile, use AudioBufferQueueSourceNode
         source = this.audioContext.createBufferQueueSource();
         source.enqueueBuffer(spriteBuffer);
         source.connect(this.audioContext.destination);
         source.start(1);
+        console.log('non loop', soundName);
       }
     } else {
       // 🌐 WEB LOGIC (Standard Web Audio API)
@@ -244,22 +266,24 @@ export class AudioSpritePlayer {
         return;
       }
 
-      source.buffer = this.audioBuffer;
+      source.buffer = spriteBuffer;
       source.connect(this.audioContext.destination);
 
       const loop = sound[2]; // audiosprite stores loop as the third element in the array
       if (loop) {
         source.loop = true;
-        source.loopStart = sound[0] / 1000; // Convert ms to seconds
-        source.loopEnd = (sound[0] + sound[1]) / 1000; // Convert ms to seconds
+        source.loopStart = 0; // Relative to the spriteBuffer
+        source.loopEnd = sound[1] / 1000; // Duration of the spriteBuffer
+        source.start(0); // Start immediately, no offset for the individual spriteBuffer
+        this.loopingSource = source; // Store reference to looping source
+      } else {
+        // Use the 'audiosprite' format: start(when, offset, duration)
+        source.start(
+          0, // Start playing now
+          0, // The offset in seconds (relative to the spriteBuffer)
+          sound[1] / 1000 // The calculated duration in seconds
+        );
       }
-
-      // Use the 'audiosprite' format: start(when, offset, duration)
-      source.start(
-        0, // Start playing now
-        sound[0] / 1000, // The offset in seconds
-        sound[1] / 1000 // The calculated duration in seconds
-      );
     }
 
     console.log(`RNAS: played ${soundName} on ${this.platform}`);
@@ -271,5 +295,19 @@ export class AudioSpritePlayer {
 
   getAudioBuffer() {
     return this.audioBuffer;
+  }
+
+  /**
+   * Stops the currently looping audio sprite.
+   * If a looping sound is playing, it will be stopped immediately.
+   */
+  stop() {
+    if (this.loopingSource) {
+      this.loopingSource.stop();
+      this.loopingSource = null;
+      console.log('RNAS: Looping audio stopped.');
+    } else {
+      console.log('RNAS: No looping audio to stop.');
+    }
   }
 }

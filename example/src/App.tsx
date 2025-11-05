@@ -1,4 +1,10 @@
-import { StyleSheet, View, Text, Button, Platform } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  Platform,
+  TouchableOpacity,
+} from 'react-native';
 import { AudioSpritePlayer } from '../../src';
 // Assuming the configuration tool is AudioManager or AudioSession
 import { AudioManager, AudioContext } from 'react-native-audio-api';
@@ -31,6 +37,7 @@ export default function App() {
         console.error('Failed to get audio URI.');
         return;
       }
+      console.log('audioUri: ', audioUri);
       setAudiouri(audioUri);
     };
 
@@ -52,7 +59,7 @@ export default function App() {
       try {
         await AudioManager.setAudioSessionOptions({
           iosCategory: 'playback',
-          iosOptions: ['mixWithOthers'],
+          iosOptions: ['mixWithOthers', 'defaultToSpeaker', 'duckOthers'],
           iosAllowHaptics: false,
         });
         // 🚨 CRITICAL: Activate the session immediately after configuring
@@ -104,36 +111,60 @@ export default function App() {
     }
   };
 
+  const stopBGM = () => {
+    const player = playerRef.current;
+    if (player) {
+      player.stop();
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text>Initialize with explicit user input - Autoplay Policy</Text>
-      <Button
-        title="Load Player"
+      <TouchableOpacity
         onPress={() => loadPlayer()}
-        disabled={!audiouri || isLoaded}
-      />
-      <Text>AudioSprite Player Example</Text>
+        style={!audiouri ? styles.buttonDisabled : styles.button}
+        disabled={!audiouri}
+      >
+        <Text style={styles.buttonText}>Load Player</Text>
+      </TouchableOpacity>
+      <Text style={{ paddingVertical: 3 }}>AudioSprite Player Example</Text>
 
-      <Button
-        title="Play Sound 1"
+      <TouchableOpacity
         onPress={() => playSound('Sound_1')}
+        style={isLoaded ? styles.button : styles.buttonDisabled}
         disabled={!isLoaded}
-      />
-      <Button
-        title="Play Sound 2"
+      >
+        <Text style={styles.buttonText}>Play Sound 1</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => playSound('Sound_2')}
+        style={isLoaded ? styles.button : styles.buttonDisabled}
         disabled={!isLoaded}
-      />
-      <Button
-        title="Play Sound 3"
+      >
+        <Text style={styles.buttonText}>Play Sound 2</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => playSound('Sound_3')}
+        style={isLoaded ? styles.button : styles.buttonDisabled}
         disabled={!isLoaded}
-      />
-      <Button
-        title="Play Background Loop"
+      >
+        <Text style={styles.buttonText}>Play Sound 3</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => playSound('bg_loop')}
+        style={isLoaded ? styles.button : styles.buttonDisabled}
         disabled={!isLoaded}
-      />
+      >
+        <Text style={styles.buttonText}>Play Background Loop</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={stopBGM}
+        style={isLoaded ? styles.button : styles.buttonDisabled}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Stop BGM</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -143,5 +174,22 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  button: {
+    backgroundColor: '#8a9ddbff',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+  },
+  buttonDisabled: {
+    backgroundColor: '#6c6c6cff',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+    userSelect: 'none',
+  },
+  buttonText: {
+    color: '#000000',
+    textAlign: 'center',
   },
 });
