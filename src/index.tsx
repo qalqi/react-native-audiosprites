@@ -174,7 +174,15 @@ export class AudioSpritePlayer {
         } else {
           arrayBuffer = audio;
         }
-        decodedBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+        // 🔑 CRITICAL FIX: Create a typed array view before decoding
+        // This ensures the data is treated as a true ArrayBuffer in the audio context.
+        const typedArrayView = new Uint8Array(arrayBuffer);
+
+        // Pass the underlying ArrayBuffer of the typed view to the decoder
+        // Note: typedArrayView.buffer gives you the underlying ArrayBuffer
+        decodedBuffer = await this.audioContext.decodeAudioData(
+          typedArrayView.buffer
+        );
       }
       // --- End Fetching and Decoding Logic ---
 
