@@ -80,7 +80,7 @@ export class AudioSpritePlayer {
    */
   private _cacheSpriteBuffers() {
     if (!this.audioBuffer || !this.manifest) {
-      return; // Only necessary for mobile platforms
+      return;
     }
 
     const sampleRate = this.audioBuffer.sampleRate;
@@ -261,6 +261,10 @@ export class AudioSpritePlayer {
         };
         source.onEnded = loopHandler;
 
+        // Stop any currently playing looping source before starting a new one
+        if (this.loopingSource) {
+          this.loopingSource.stop();
+        }
         source.start(0); // Start immediately
         this.loopingSource = source; // Store reference to looping source
       } else {
@@ -290,6 +294,11 @@ export class AudioSpritePlayer {
         source.loop = true;
         source.loopStart = 0; // Relative to the spriteBuffer
         source.loopEnd = sound[1] / 1000; // Duration of the spriteBuffer
+
+        // Stop any currently playing looping source before starting a new one
+        if (this.loopingSource) {
+          this.loopingSource.stop();
+        }
         source.start(0); // Start immediately, no offset for the individual spriteBuffer
         this.loopingSource = source; // Store reference to looping source
       } else {
