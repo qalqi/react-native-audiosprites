@@ -258,3 +258,1059 @@ MIT
 [Shaker, Woda, Conga, Bongo, Templeblock.wav](https://freesound.org/people/kwazi/sounds/34115/) by [kwazi](https://freesound.org/people/kwazi/) | License: [Attribution 3.0](http://creativecommons.org/licenses/by/3.0/)
 
 Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
+
+---
+
+# Translations
+
+## Spanish
+
+![react-native-audiosprites_poster](react-native-audiosprites_poster.jpg)
+
+# react-native-audiosprites
+
+Un reproductor universal para sprites de audio generados por la herramienta 'audiosprite'.
+¡Soporta la reproducción de múltiples sonidos al mismo tiempo!
+
+## Instalación
+
+```sh
+npm install react-native-audiosprites
+```
+
+```sh
+yarn add react-native-audiosprites
+```
+
+## Uso
+
+Primero, necesitas generar un sprite de audio y un archivo de manifiesto JSON usando la herramienta `audiosprite`.
+
+Asumiendo que tienes [`audiosprite`](https://www.npmjs.com/package/audiosprite) instalado globalmente:
+
+```sh
+audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg_loop" src/__tests__/sounds/bg_loop.wav src/__tests__/sounds/Sound_1.m4a src/__tests__/sounds/Sound_2.m4a src/__tests__/sounds/Sound_3.m4a src/__tests__/sounds/Sound_4.m4a
+```
+
+Este comando generará `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a` y `mygameaudio.ac3` en el directorio `src/__tests__/sounds/`.
+
+### Sonidos en Bucle
+
+Puedes crear sonidos en bucle usando la opción `--loop` con el comando `audiosprite`. El valor de la opción `--loop` debe ser el nombre del sonido que deseas repetir.
+
+Por ejemplo, para repetir el sonido `bg_music`, usarías el siguiente comando:
+
+```sh
+audiosprite --output audiosprite --format howler --loop "bg_music" --path ./src/__tests__/ Sound_1.m4a Sound_2.m4a Sound_3.m4a Sound_4.m4a bg_music.wav
+```
+
+Cuando reproduces un sonido en bucle, se reproducirá continuamente hasta que lo detengas usando el método `player.stop()`. La funcionalidad de bucle es compatible tanto en plataformas web como móviles.
+
+Luego, puedes usar el `AudioSpritePlayer` para reproducir los sonidos del sprite.
+
+### Entorno del Navegador
+
+```typescript
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+
+const player = new AudioSpritePlayer({
+  platform: 'web',
+});
+
+async function playSound(soundName: string) {
+  try {
+    // Carga el manifiesto del sprite de audio y los archivos de audio
+    // Ajusta la ruta a tu archivo audiosprite.json
+    await player.load('./src/__tests__/sounds/mygameaudio.json');
+    console.log('Sprite de audio cargado exitosamente.');
+
+    // Reproduce un sonido del spritemap
+    player.play(soundName);
+    console.log(`Reproduciendo sonido: ${soundName}`);
+  } catch (error) {
+    console.error('Error al reproducir el sonido:', error);
+  }
+}
+
+function stopSound() {
+  player.stop();
+  console.log('Sonido en bucle detenido.');
+}
+
+// Ejemplo de uso:
+playSound('Sound_1');
+// playSound('Sound_2');
+// Para detener un sonido en bucle:
+// stopSound();
+```
+
+### Entorno de React Native
+
+Para React Native, necesitarás `react-native-audio-api` y `expo-asset` para manejar la reproducción de audio y la carga de activos.
+
+Primero, instala las dependencias:
+
+```sh
+npm install react-native-audio-api expo-asset expo-file-system
+# o
+yarn add react-native-audio-api expo-asset expo-file-system
+```
+
+Cambia `metro.config.js` según la documentación de `react-native-audio-api`: https://docs.swmansion.com/react-native-audio-api/docs/fundamentals/getting-started
+
+```js
+module.exports = wrapWithAudioAPIMetroConfig(config);
+```
+
+Luego, puedes usarlo en tu componente:
+
+```typescript
+import { StyleSheet, View, Text, Platform, TouchableOpacity } from 'react-native';
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+import { AudioManager, AudioContext } from 'react-native-audio-api';
+import { useEffect, useState, useRef } from 'react';
+import { Asset } from 'expo-asset';
+import { fetch } from 'expo/fetch';
+import manifest from '../assets/mygameaudio.json';
+
+// Importa el activo de audio
+const audioAsset = require('../assets/mygameaudio.mp3');
+
+export default function App() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const playerRef = useRef<AudioSpritePlayer | null>(null);
+
+  useEffect(() => {
+    const loadPlayer = async () => {
+      const asset = Asset.fromModule(audioAsset);
+      await asset.downloadAsync();
+      const audioUri = asset.localUri || asset.uri;
+
+      if (!audioUri) {
+        console.error('No se pudo obtener la URI del audio.');
+        return;
+      }
+
+      if (Platform.OS === 'ios') {
+        try {
+          await AudioManager.setAudioSessionOptions({
+            iosCategory: 'playback',
+            iosOptions: ['mixWithOthers'],
+          });
+          await AudioManager.setAudioSessionActivity(true);
+        } catch (e) {
+          console.error('Error al configurar las opciones de AudioSession:', e);
+        }
+      }
+
+      const audioContext = new AudioContext();
+      const audioPlayer = new AudioSpritePlayer({
+        audioContext,
+        fetch: fetch.bind(globalThis),
+        platform: Platform.OS,
+      });
+
+      try {
+        await audioPlayer.load(manifest, audioUri);
+        playerRef.current = audioPlayer;
+        setIsLoaded(true);
+        console.log('Sprite de audio cargado exitosamente.');
+      } catch (error) {
+        console.error('Error al cargar el sprite de audio:', error);
+      }
+    };
+
+    loadPlayer();
+  }, []);
+
+  const playSound = (soundName: string) => {
+    const player = playerRef.current;
+    if (player && isLoaded) {
+      player.play(soundName);
+      console.log(`Reproduciendo sonido: ${soundName}`);
+    } else {
+      console.warn('El reproductor aún no se ha cargado.');
+    }
+  };
+
+  const stopBGM = () => {
+    const player = playerRef.current;
+    if (player) {
+      player.stop();
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text>Ejemplo de AudioSprite Player</Text>
+      <TouchableOpacity
+        onPress={() => loadPlayer()}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Cargar Reproductor</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_1')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Reproducir Sonido 1</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_2')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Reproducir Sonido 2</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('bg_loop')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Reproducir Bucle de Fondo</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={stopBGM}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Detener BGM</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  button: {
+    backgroundColor: '#DDDDDD',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#000000',
+    textAlign: 'center',
+  },
+});
+```
+
+## Inspiración
+
+https://github.com/goldfire/howler.js
+El json generado también funciona con new Howl({
+sprite: {
+key1: [offset, duration, (loop)]
+},
+});
+
+## Contribuciones
+
+- [Flujo de trabajo de desarrollo](CONTRIBUTING.md#development-workflow)
+- [Enviar una pull request](CONTRIBUTING.md#sending-a-pull-request)
+- [Código de conducta](CODE_OF_CONDUCT.md)
+
+## Licencia
+
+MIT
+
+## Créditos
+
+[Shaker, Woda, Conga, Bongo, Templeblock.wav](https://freesound.org/people/kwazi/sounds/34115/) por [kwazi](https://freesound.org/people/kwazi/) | Licencia: [Atribución 3.0](http://creativecommons.org/licenses/by/3.0/)
+
+Hecho con [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
+
+## Russian
+
+![react-native-audiosprites_poster](react-native-audiosprites_poster.jpg)
+
+# react-native-audiosprites
+
+Универсальный проигрыватель для аудио-спрайтов, созданных с помощью инструмента 'audiosprite'.
+Поддерживает одновременное воспроизведение нескольких звуков!
+
+## Установка
+
+```sh
+npm install react-native-audiosprites
+```
+
+```sh
+yarn add react-native-audiosprites
+```
+
+## Использование
+
+Сначала вам нужно создать аудио-спрайт и файл манифеста JSON с помощью инструмента `audiosprite`.
+
+Предполагая, что у вас глобально установлен [`audiosprite`](https://www.npmjs.com/package/audiosprite):
+
+```sh
+audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg_loop" src/__tests__/sounds/bg_loop.wav src/__tests__/sounds/Sound_1.m4a src/__tests__/sounds/Sound_2.m4a src/__tests__/sounds/Sound_3.m4a src/__tests__/sounds/Sound_4.m4a
+```
+
+Эта команда создаст `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a` и `mygameaudio.ac3` в каталоге `src/__tests__/sounds/`.
+
+### Зацикленные звуки
+
+Вы можете создавать зацикленные звуки, используя опцию `--loop` с командой `audiosprite`. Значением опции `--loop` должно быть имя звука, который вы хотите зациклить.
+
+Например, чтобы зациклить звук `bg_music`, вы должны использовать следующую команду:
+
+```sh
+audiosprite --output audiosprite --format howler --loop "bg_music" --path ./src/__tests__/ Sound_1.m4a Sound_2.m4a Sound_3.m4a Sound_4.m4a bg_music.wav
+```
+
+Когда вы воспроизводите зацикленный звук, он будет воспроизводиться непрерывно, пока вы не остановите его с помощью метода `player.stop()`. Функция зацикливания поддерживается как на веб-, так и на мобильных платформах.
+
+Затем вы можете использовать `AudioSpritePlayer` для воспроизведения звуков из спрайта.
+
+### Среда браузера
+
+```typescript
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+
+const player = new AudioSpritePlayer({
+  platform: 'web',
+});
+
+async function playSound(soundName: string) {
+  try {
+    // Загрузите манифест аудио-спрайта и аудиофайлы
+    // Укажите правильный путь к вашему файлу audiosprite.json
+    await player.load('./src/__tests__/sounds/mygameaudio.json');
+    console.log('Аудио-спрайт успешно загружен.');
+
+    // Воспроизведите звук из spritemap
+    player.play(soundName);
+    console.log(`Воспроизведение звука: ${soundName}`);
+  } catch (error) {
+    console.error('Ошибка воспроизведения звука:', error);
+  }
+}
+
+function stopSound() {
+  player.stop();
+  console.log('Зацикленный звук остановлен.');
+}
+
+// Пример использования:
+playSound('Sound_1');
+// playSound('Sound_2');
+// Чтобы остановить зацикленный звук:
+// stopSound();
+```
+
+### Среда React Native
+
+Для React Native вам понадобятся `react-native-audio-api` и `expo-asset` для обработки воспроизведения аудио и загрузки ресурсов.
+
+Сначала установите зависимости:
+
+```sh
+npm install react-native-audio-api expo-asset expo-file-system
+# или
+yarn add react-native-audio-api expo-asset expo-file-system
+```
+
+Измените `metro.config.js` в соответствии с документацией `react-native-audio-api`: https://docs.swmansion.com/react-native-audio-api/docs/fundamentals/getting-started
+
+```js
+module.exports = wrapWithAudioAPIMetroConfig(config);
+```
+
+Затем вы можете использовать его в своем компоненте:
+
+```typescript
+import { StyleSheet, View, Text, Platform, TouchableOpacity } from 'react-native';
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+import { AudioManager, AudioContext } from 'react-native-audio-api';
+import { useEffect, useState, useRef } from 'react';
+import { Asset } from 'expo-asset';
+import { fetch } from 'expo/fetch';
+import manifest from '../assets/mygameaudio.json';
+
+// Импортируйте аудио-ресурс
+const audioAsset = require('../assets/mygameaudio.mp3');
+
+export default function App() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const playerRef = useRef<AudioSpritePlayer | null>(null);
+
+  useEffect(() => {
+    const loadPlayer = async () => {
+      const asset = Asset.fromModule(audioAsset);
+      await asset.downloadAsync();
+      const audioUri = asset.localUri || asset.uri;
+
+      if (!audioUri) {
+        console.error('Не удалось получить URI аудио.');
+        return;
+      }
+
+      if (Platform.OS === 'ios') {
+        try {
+          await AudioManager.setAudioSessionOptions({
+            iosCategory: 'playback',
+            iosOptions: ['mixWithOthers'],
+          });
+          await AudioManager.setAudioSessionActivity(true);
+        } catch (e) {
+          console.error('Не удалось настроить параметры AudioSession:', e);
+        }
+      }
+
+      const audioContext = new AudioContext();
+      const audioPlayer = new AudioSpritePlayer({
+        audioContext,
+        fetch: fetch.bind(globalThis),
+        platform: Platform.OS,
+      });
+
+      try {
+        await audioPlayer.load(manifest, audioUri);
+        playerRef.current = audioPlayer;
+        setIsLoaded(true);
+        console.log('Аудио-спрайт успешно загружен.');
+      } catch (error) {
+        console.error('Не удалось загрузить аудио-спрайт:', error);
+      }
+    };
+
+    loadPlayer();
+  }, []);
+
+  const playSound = (soundName: string) => {
+    const player = playerRef.current;
+    if (player && isLoaded) {
+      player.play(soundName);
+      console.log(`Воспроизведение звука: ${soundName}`);
+    } else {
+      console.warn('Проигрыватель еще не загружен.');
+    }
+  };
+
+  const stopBGM = () => {
+    const player = playerRef.current;
+    if (player) {
+      player.stop();
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text>Пример AudioSprite Player</Text>
+      <TouchableOpacity
+        onPress={() => loadPlayer()}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Загрузить проигрыватель</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_1')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Воспроизвести звук 1</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_2')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Воспроизвести звук 2</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('bg_loop')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Воспроизвести фоновый цикл</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={stopBGM}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Остановить фоновую музыку</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  button: {
+    backgroundColor: '#DDDDDD',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#000000',
+    textAlign: 'center',
+  },
+});
+```
+
+## Вдохновение
+
+https://github.com/goldfire/howler.js
+Сгенерированный json также работает с new Howl({
+sprite: {
+key1: [offset, duration, (loop)]
+},
+});
+
+## Участие
+
+- [Рабочий процесс разработки](CONTRIBUTING.md#development-workflow)
+- [Отправка pull request](CONTRIBUTING.md#sending-a-pull-request)
+- [Кодекс поведения](CODE_OF_CONDUCT.md)
+
+## Лицензия
+
+MIT
+
+## Кредиты
+
+[Shaker, Woda, Conga, Bongo, Templeblock.wav](https://freesound.org/people/kwazi/sounds/34115/) от [kwazi](https://freesound.org/people/kwazi/) | Лицензия: [Attribution 3.0](http://creativecommons.org/licenses/by/3.0/)
+
+Сделано с помощью [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
+
+## Hindi
+
+![react-native-audiosprites_poster](react-native-audiosprites_poster.jpg)
+
+# react-native-audiosprites
+
+'ऑडियोस्प्राइट' टूल द्वारा उत्पन्न ऑडियो स्प्राइट्स के लिए एक सार्वभौमिक खिलाड़ी।
+एक ही समय में कई ध्वनियाँ बजाने का समर्थन करता है!
+
+## स्थापना
+
+```sh
+npm install react-native-audiosprites
+```
+
+```sh
+yarn add react-native-audiosprites
+```
+
+## उपयोग
+
+सबसे पहले, आपको `audiosprite` टूल का उपयोग करके एक ऑडियो स्प्राइट और एक JSON मैनिफ़ेस्ट फ़ाइल उत्पन्न करने की आवश्यकता है।
+
+मान लें कि आपके पास विश्व स्तर पर [`audiosprite`](https://www.npmjs.com/package/audiosprite) स्थापित है:
+
+```sh
+audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg_loop" src/__tests__/sounds/bg_loop.wav src/__tests__/sounds/Sound_1.m4a src/__tests__/sounds/Sound_2.m4a src/__tests__/sounds/Sound_3.m4a src/__tests__/sounds/Sound_4.m4a
+```
+
+यह कमांड `src/__tests__/sounds/` डायरेक्टरी में `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a`, और `mygameaudio.ac3` उत्पन्न करेगा।
+
+### लूपिंग ध्वनियाँ
+
+आप `audiosprite` कमांड के साथ `--loop` विकल्प का उपयोग करके लूपिंग ध्वनियाँ बना सकते हैं। `--loop` विकल्प का मान उस ध्वनि का नाम होना चाहिए जिसे आप लूप करना चाहते हैं।
+
+उदाहरण के लिए, `bg_music` ध्वनि को लूप करने के लिए, आप निम्न कमांड का उपयोग करेंगे:
+
+```sh
+audiosprite --output audiosprite --format howler --loop "bg_music" --path ./src/__tests__/ Sound_1.m4a Sound_2.m4a Sound_3.m4a Sound_4.m4a bg_music.wav
+```
+
+जब आप एक लूपिंग ध्वनि बजाते हैं, तो यह तब तक लगातार बजेगी जब तक आप इसे `player.stop()` विधि का उपयोग करके रोक नहीं देते। लूपिंग कार्यक्षमता वेब और मोबाइल दोनों प्लेटफार्मों पर समर्थित है।
+
+फिर, आप स्प्राइट से ध्वनियों को चलाने के लिए `AudioSpritePlayer` का उपयोग कर सकते हैं।
+
+### ब्राउज़र पर्यावरण
+
+```typescript
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+
+const player = new AudioSpritePlayer({
+  platform: 'web',
+});
+
+async function playSound(soundName: string) {
+  try {
+    // ऑडियो स्प्राइट मैनिफ़ेस्ट और ऑडियो फ़ाइलें लोड करें
+    // अपनी audiosprite.json फ़ाइल का पथ समायोजित करें
+    await player.load('./src/__tests__/sounds/mygameaudio.json');
+    console.log('ऑडियो स्प्राइट सफलतापूर्वक लोड हो गया।');
+
+    // स्प्राइटमैप से एक ध्वनि चलाएं
+    player.play(soundName);
+    console.log(`ध्वनि बज रही है: ${soundName}`);
+  } catch (error) {
+    console.error('ध्वनि बजाने में त्रुटि:', error);
+  }
+}
+
+function stopSound() {
+  player.stop();
+  console.log('लूपिंग ध्वनि बंद हो गई।');
+}
+
+// उदाहरण उपयोग:
+playSound('Sound_1');
+// playSound('Sound_2');
+// एक लूपिंग ध्वनि को रोकने के लिए:
+// stopSound();
+```
+
+### रिएक्ट नेटिव पर्यावरण
+
+रिएक्ट नेटिव के लिए, आपको ऑडियो प्लेबैक और एसेट लोडिंग को संभालने के लिए `react-native-audio-api` और `expo-asset` की आवश्यकता होगी।
+
+सबसे पहले, निर्भरताएँ स्थापित करें:
+
+```sh
+npm install react-native-audio-api expo-asset expo-file-system
+# या
+yarn add react-native-audio-api expo-asset expo-file-system
+```
+
+`react-native-audio-api` दस्तावेज़ीकरण के अनुसार `metro.config.js` बदलें: https://docs.swmansion.com/react-native-audio-api/docs/fundamentals/getting-started
+
+```js
+module.exports = wrapWithAudioAPIMetroConfig(config);
+```
+
+फिर, आप इसे अपने घटक में उपयोग कर सकते हैं:
+
+```typescript
+import { StyleSheet, View, Text, Platform, TouchableOpacity } from 'react-native';
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+import { AudioManager, AudioContext } from 'react-native-audio-api';
+import { useEffect, useState, useRef } from 'react';
+import { Asset } from 'expo-asset';
+import { fetch } from 'expo/fetch';
+import manifest from '../assets/mygameaudio.json';
+
+// ऑडियो एसेट आयात करें
+const audioAsset = require('../assets/mygameaudio.mp3');
+
+export default function App() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const playerRef = useRef<AudioSpritePlayer | null>(null);
+
+  useEffect(() => {
+    const loadPlayer = async () => {
+      const asset = Asset.fromModule(audioAsset);
+      await asset.downloadAsync();
+      const audioUri = asset.localUri || asset.uri;
+
+      if (!audioUri) {
+        console.error('ऑडियो URI प्राप्त करने में विफल।');
+        return;
+      }
+
+      if (Platform.OS === 'ios') {
+        try {
+          await AudioManager.setAudioSessionOptions({
+            iosCategory: 'playback',
+            iosOptions: ['mixWithOthers'],
+          });
+          await AudioManager.setAudioSessionActivity(true);
+        } catch (e) {
+          console.error('ऑडियो सत्र विकल्प कॉन्फ़िगर करने में विफल:', e);
+        }
+      }
+
+      const audioContext = new AudioContext();
+      const audioPlayer = new AudioSpritePlayer({
+        audioContext,
+        fetch: fetch.bind(globalThis),
+        platform: Platform.OS,
+      });
+
+      try {
+        await audioPlayer.load(manifest, audioUri);
+        playerRef.current = audioPlayer;
+        setIsLoaded(true);
+        console.log('ऑडियो स्प्राइट सफलतापूर्वक लोड हो गया।');
+      } catch (error) {
+        console.error('ऑडियो स्प्राइट लोड करने में विफल:', error);
+      }
+    };
+
+    loadPlayer();
+  }, []);
+
+  const playSound = (soundName: string) => {
+    const player = playerRef.current;
+    if (player && isLoaded) {
+      player.play(soundName);
+      console.log(`ध्वनि बज रही है: ${soundName}`);
+    } else {
+      console.warn('खिलाड़ी अभी तक लोड नहीं हुआ है।');
+    }
+  };
+
+  const stopBGM = () => {
+    const player = playerRef.current;
+    if (player) {
+      player.stop();
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text>ऑडियोस्प्राइट प्लेयर उदाहरण</Text>
+      <TouchableOpacity
+        onPress={() => loadPlayer()}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>खिलाड़ी लोड करें</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_1')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>ध्वनि 1 चलाएं</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_2')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>ध्वनि 2 चलाएं</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('bg_loop')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>पृष्ठभूमि लूप चलाएं</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={stopBGM}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>बीजीएम रोकें</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  button: {
+    backgroundColor: '#DDDDDD',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#000000',
+    textAlign: 'center',
+  },
+});
+```
+
+## प्रेरणा
+
+https://github.com/goldfire/howler.js
+उत्पन्न json new Howl({
+sprite: {
+key1: [offset, duration, (loop)]
+},
+}); के साथ भी काम करता है।
+
+## योगदान
+
+- [विकास कार्यप्रवाह](CONTRIBUTING.md#development-workflow)
+- [एक पुल अनुरोध भेजना](CONTRIBUTING.md#sending-a-pull-request)
+- [आचार संहिता](CODE_OF_CONDUCT.md)
+
+## लाइसेंस
+
+एमआईटी
+
+## क्रेडिट
+
+[kwazi](https://freesound.org/people/kwazi/) द्वारा [शकर, वोडा, कोंगा, बोंगो, टेम्पलब्लॉक.wav](https://freesound.org/people/kwazi/sounds/34115/) | लाइसेंस: [एट्रिब्यूशन 3.0](http://creativecommons.org/licenses/by/3.0/)
+
+[create-react-native-library](https://github.com/callstack/react-native-builder-bob) के साथ बनाया गया
+
+## Chinese
+
+![react-native-audiosprites_poster](react-native-audiosprites_poster.jpg)
+
+# react-native-audiosprites
+
+一个用于播放由“audiosprite”工具生成的音频精灵的通用播放器。
+支持同时播放多种声音！
+
+## 安装
+
+```sh
+npm install react-native-audiosprites
+```
+
+```sh
+yarn add react-native-audiosprites
+```
+
+## 用法
+
+首先，您需要使用 `audiosprite` 工具生成一个音频精灵和一个 JSON 清单文件。
+
+假设您已全局安装 [`audiosprite`](https://www.npmjs.com/package/audiosprite)：
+
+```sh
+audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg_loop" src/__tests__/sounds/bg_loop.wav src/__tests__/sounds/Sound_1.m4a src/__tests__/sounds/Sound_2.m4a src/__tests__/sounds/Sound_3.m4a src/__tests__/sounds/Sound_4.m4a
+```
+
+此命令将在 `src/__tests__/sounds/` 目录中生成 `mygameaudio.json`、`mygameaudio.mp3`、`mygameaudio.ogg`、`mygameaudio.m4a` 和 `mygameaudio.ac3`。
+
+### 循环声音
+
+您可以使用 `audiosprite` 命令的 `--loop` 选项创建循环声音。`--loop` 选项的值应该是您想要循环的声音的名称。
+
+例如，要循环 `bg_music` 声音，您将使用以下命令：
+
+```sh
+audiosprite --output audiosprite --format howler --loop "bg_music" --path ./src/__tests__/ Sound_1.m4a Sound_2.m4a Sound_3.m4a Sound_4.m4a bg_music.wav
+```
+
+当您播放循环声音时，它将连续播放，直到您使用 `player.stop()` 方法停止它。循环功能在 Web 和移动平台上都受支持。
+
+然后，您可以使用 `AudioSpritePlayer` 播放精灵中的声音。
+
+### 浏览器环境
+
+```typescript
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+
+const player = new AudioSpritePlayer({
+  platform: 'web',
+});
+
+async function playSound(soundName: string) {
+  try {
+    // 加载音频精灵清单和音频文件
+    // 调整到您的 audiosprite.json 文件的路径
+    await player.load('./src/__tests__/sounds/mygameaudio.json');
+    console.log('音频精灵已成功加载。');
+
+    // 从 spritemap 播放声音
+    player.play(soundName);
+    console.log(`正在播放声音: ${soundName}`);
+  } catch (error) {
+    console.error('播放声音时出错:', error);
+  }
+}
+
+function stopSound() {
+  player.stop();
+  console.log('已停止循环声音。');
+}
+
+// 用法示例:
+playSound('Sound_1');
+// playSound('Sound_2');
+// 停止循环声音:
+// stopSound();
+```
+
+### React Native 环境
+
+对于 React Native，您需要 `react-native-audio-api` 和 `expo-asset` 来处理音频播放和资产加载。
+
+首先，安装依赖项：
+
+```sh
+npm install react-native-audio-api expo-asset expo-file-system
+# 或
+yarn add react-native-audio-api expo-asset expo-file-system
+```
+
+根据 `react-native-audio-api` 文档更改 `metro.config.js`：https://docs.swmansion.com/react-native-audio-api/docs/fundamentals/getting-started
+
+```js
+module.exports = wrapWithAudioAPIMetroConfig(config);
+```
+
+然后，您可以在您的组件中使用它：
+
+```typescript
+import { StyleSheet, View, Text, Platform, TouchableOpacity } from 'react-native';
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+import { AudioManager, AudioContext } from 'react-native-audio-api';
+import { useEffect, useState, useRef } from 'react';
+import { Asset } from 'expo-asset';
+import { fetch } from 'expo/fetch';
+import manifest from '../assets/mygameaudio.json';
+
+// 导入音频资产
+const audioAsset = require('../assets/mygameaudio.mp3');
+
+export default function App() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const playerRef = useRef<AudioSpritePlayer | null>(null);
+
+  useEffect(() => {
+    const loadPlayer = async () => {
+      const asset = Asset.fromModule(audioAsset);
+      await asset.downloadAsync();
+      const audioUri = asset.localUri || asset.uri;
+
+      if (!audioUri) {
+        console.error('无法获取音频 URI。');
+        return;
+      }
+
+      if (Platform.OS === 'ios') {
+        try {
+          await AudioManager.setAudioSessionOptions({
+            iosCategory: 'playback',
+            iosOptions: ['mixWithOthers'],
+          });
+          await AudioManager.setAudioSessionActivity(true);
+        } catch (e) {
+          console.error('配置 AudioSession 选项失败:', e);
+        }
+      }
+
+      const audioContext = new AudioContext();
+      const audioPlayer = new AudioSpritePlayer({
+        audioContext,
+        fetch: fetch.bind(globalThis),
+        platform: Platform.OS,
+      });
+
+      try {
+        await audioPlayer.load(manifest, audioUri);
+        playerRef.current = audioPlayer;
+        setIsLoaded(true);
+        console.log('音频精灵已成功加载。');
+      } catch (error) {
+        console.error('加载音频精灵失败:', error);
+      }
+    };
+
+    loadPlayer();
+  }, []);
+
+  const playSound = (soundName: string) => {
+    const player = playerRef.current;
+    if (player && isLoaded) {
+      player.play(soundName);
+      console.log(`正在播放声音: ${soundName}`);
+    } else {
+      console.warn('播放器尚未加载。');
+    }
+  };
+
+  const stopBGM = () => {
+    const player = playerRef.current;
+    if (player) {
+      player.stop();
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text>AudioSprite 播放器示例</Text>
+      <TouchableOpacity
+        onPress={() => loadPlayer()}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>加载播放器</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_1')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>播放声音 1</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_2')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>播放声音 2</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('bg_loop')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>播放背景循环</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={stopBGM}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>停止背景音乐</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  button: {
+    backgroundColor: '#DDDDDD',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#000000',
+    textAlign: 'center',
+  },
+});
+```
+
+## 灵感
+
+https://github.com/goldfire/howler.js
+生成的 json 也适用于 new Howl({
+sprite: {
+key1: [offset, duration, (loop)]
+},
+});
+
+## 贡献
+
+- [开发工作流程](CONTRIBUTING.md#development-workflow)
+- [发送拉取请求](CONTRIBUTING.md#sending-a-pull-request)
+- [行为准则](CODE_OF_CONDUCT.md)
+
+## 执照
+
+麻省理工学院
+
+## 学分
+
+[Shaker, Woda, Conga, Bongo, Templeblock.wav](https://freesound.org/people/kwazi/sounds/34115/) by [kwazi](https://freesound.org/people/kwazi/) | 执照: [署名 3.0](http://creativecommons.org/licenses/by/3.0/)
+
+使用 [create-react-native-library](https://github.com/callstack/react-native-builder-bob) 制作

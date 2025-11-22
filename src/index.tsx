@@ -12,6 +12,8 @@ export class AudioSpritePlayer {
   // Cache for the small, pre-split AudioBuffers used by mobile's QueueSourceNode
   private spriteBufferCache: Record<string, any> = {};
   private loopingSource: any | null = null;
+  private sourcePool: any[] = []; // NEW: Pool for non-looping sources
+  private maxPoolSize: number = 5; // Adjust this based on testing (5 is a good start)
 
   constructor({
     audioContext,
@@ -80,7 +82,7 @@ export class AudioSpritePlayer {
    */
   private _cacheSpriteBuffers() {
     if (!this.audioBuffer || !this.manifest) {
-      return; // Only necessary for mobile platforms
+      return;
     }
 
     const sampleRate = this.audioBuffer.sampleRate;
@@ -122,6 +124,64 @@ export class AudioSpritePlayer {
       this.spriteBufferCache[soundName] = spriteBuffer;
       // console.log(`Cached sprite buffer for ${soundName}, frames: ${durationFrames}`);
     }
+  }
+
+  /**
+   * Retrieves a source node from the pool or creates a new one if the pool is under capacity.
+   */
+  private _getOrCreateSourceNode(): any {
+    if (this.platform === 'web') {
+      // Web logic remains simple: always create a standard AudioBufferSourceNode
+      const source = this.audioContext.createBufferSource();
+      source.connect(this.audioContext.destination);
+      return source;
+    }
+
+    // Mobile/QueueSourceNode logic
+    let source;
+    if (this.sourcePool.length > 0) {
+      source = this.sourcePool.pop(); // Reuse an available source
+      // Disconnect the previous onEnded handler if it had one
+      source.onEnded = null;
+      // console.log('Reusing source from pool. Pool size:', this.sourcePool.length);
+    } else if (this.sourcePool.length < this.maxPoolSize) {
+      // Create a new source if pool is not full
+      if (!this.audioContext.createBufferQueueSource) {
+        console.error(
+          'RNAS Error: createBufferQueueSource is not available. Cannot create pool.'
+        );
+        return null;
+      }
+      source = this.audioContext.createBufferQueueSource();
+      source.connect(this.audioContext.destination);
+      // console.log('Created new source. Pool size:', this.sourcePool.length);
+    } else {
+      // If pool is full, we might have to block or fail.
+      // For simplicity, we'll return null and warn, but a robust system
+      // might implement a "wait-and-retry" mechanism.
+      console.warn(
+        'RNAS Warning: Source pool is full. Dropping non-looping sound.'
+      );
+      return null;
+    }
+
+    // Define the cleanup/recycling function
+    const cleanupAndRecycle = () => {
+      // Only recycle if we are under maxPoolSize and it's not the looping source
+      if (this.sourcePool.length < this.maxPoolSize) {
+        this.sourcePool.push(source);
+        // console.log('Recycled source. Pool size:', this.sourcePool.length);
+      } else {
+        // If pool is full, let it be garbage collected
+        source.disconnect();
+        // console.log('Source disconnected (GC candidate).');
+      }
+    };
+
+    // Assign the cleanup function to run when the sound finishes playing
+    source.onEnded = cleanupAndRecycle;
+
+    return source;
   }
 
   async load(json: any, audio?: any) {
@@ -174,7 +234,15 @@ export class AudioSpritePlayer {
         } else {
           arrayBuffer = audio;
         }
-        decodedBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+        // 🔑 CRITICAL FIX: Create a typed array view before decoding
+        // This ensures the data is treated as a true ArrayBuffer in the audio context.
+        const typedArrayView = new Uint8Array(arrayBuffer);
+
+        // Pass the underlying ArrayBuffer of the typed view to the decoder
+        // Note: typedArrayView.buffer gives you the underlying ArrayBuffer
+        decodedBuffer = await this.audioContext.decodeAudioData(
+          typedArrayView.buffer
+        );
       }
       // --- End Fetching and Decoding Logic ---
 
@@ -253,15 +321,22 @@ export class AudioSpritePlayer {
         };
         source.onEnded = loopHandler;
 
+        // Stop any currently playing looping source before starting a new one
+        if (this.loopingSource) {
+          this.loopingSource.stop();
+        }
         source.start(0); // Start immediately
         this.loopingSource = source; // Store reference to looping source
       } else {
-        // For non-looping sounds on mobile, use AudioBufferQueueSourceNode
-        source = this.audioContext.createBufferQueueSource();
+        // **NEW: USE POOL FOR NON-LOOPING MOBILE SOUNDS**
+        source = this._getOrCreateSourceNode();
+        if (!source) return; // Dropped sound because pool was full
+
+        // Must re-enqueue the buffer since the source was reused
         source.enqueueBuffer(spriteBuffer);
-        source.connect(this.audioContext.destination);
-        source.start(1);
-        console.log('non loop', soundName);
+
+        // Start immediately (start time 0 for BufferQueueSourceNode means "as soon as possible")
+        source.start(0);
       }
     } else {
       // 🌐 WEB LOGIC (Standard Web Audio API)
@@ -282,6 +357,11 @@ export class AudioSpritePlayer {
         source.loop = true;
         source.loopStart = 0; // Relative to the spriteBuffer
         source.loopEnd = sound[1] / 1000; // Duration of the spriteBuffer
+
+        // Stop any currently playing looping source before starting a new one
+        if (this.loopingSource) {
+          this.loopingSource.stop();
+        }
         source.start(0); // Start immediately, no offset for the individual spriteBuffer
         this.loopingSource = source; // Store reference to looping source
       } else {

@@ -133,7 +133,14 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <Text>Initialize with explicit user input - Autoplay Policy</Text>
+      <Text style={styles.title}>
+        react-native-audiosprites - AudioSprite Player
+      </Text>
+      <Text style={styles.subtitle}>
+        Suggestion: Implement the sound loading/playback based on the Chrome
+        Autoplay policy guidelines detailed here:
+        https://developer.chrome.com/blog/autoplay similar to this example.
+      </Text>
       <TouchableOpacity
         onPress={() => loadPlayer()}
         style={!audiouri ? styles.buttonDisabled : styles.button}
@@ -141,43 +148,47 @@ export default function App() {
       >
         <Text style={styles.buttonText}>Load Player</Text>
       </TouchableOpacity>
-      <Text>AudioSprite Player Example</Text>
 
-      <TouchableOpacity
-        onPress={() => playSound('Sound_1')}
-        style={isLoaded ? styles.button : styles.buttonDisabled}
-        disabled={!isLoaded}
-      >
-        <Text style={styles.buttonText}>Play Sound 1</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => playSound('Sound_2')}
-        style={isLoaded ? styles.button : styles.buttonDisabled}
-        disabled={!isLoaded}
-      >
-        <Text style={styles.buttonText}>Play Sound 2</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => playSound('Sound_3')}
-        style={isLoaded ? styles.button : styles.buttonDisabled}
-        disabled={!isLoaded}
-      >
-        <Text style={styles.buttonText}>Play Sound 3</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => playSound('bg_loop')}
-        style={isLoaded ? styles.button : styles.buttonDisabled}
-        disabled={!isLoaded}
-      >
-        <Text style={styles.buttonText}>Play Background Loop</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={stopBGM}
-        style={isLoaded ? styles.button : styles.buttonDisabled}
-        disabled={!isLoaded}
-      >
-        <Text style={styles.buttonText}>Stop BGM</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonsContainer}>
+        <TouchableOpacity
+          onPress={() => playSound('Sound_1')}
+          style={isLoaded ? styles.button : styles.buttonDisabled}
+          disabled={!isLoaded}
+        >
+          <Text style={styles.buttonText}>Play Sound 1</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => playSound('Sound_2')}
+          style={isLoaded ? styles.button : styles.buttonDisabled}
+          disabled={!isLoaded}
+        >
+          <Text style={styles.buttonText}>Play Sound 2</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => playSound('Sound_3')}
+          style={isLoaded ? styles.button : styles.buttonDisabled}
+          disabled={!isLoaded}
+        >
+          <Text style={styles.buttonText}>Play Sound 3</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.buttonsContainer}>
+        <TouchableOpacity
+          onPress={() => playSound('bg_loop')}
+          style={isLoaded ? styles.button : styles.buttonDisabled}
+          disabled={!isLoaded}
+        >
+          <Text style={styles.buttonText}>Play Background Music Loop</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={stopBGM}
+          style={isLoaded ? styles.button : styles.buttonDisabled}
+          disabled={!isLoaded}
+        >
+          <Text style={styles.buttonText}>Stop Background Music(BGM) Loop</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -187,22 +198,39 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#f0f0f0',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    margin: 6,
+  },
+  subtitle: {
+    fontSize: 16,
+    margin: 9,
+  },
+  buttonsContainer: {
+    marginTop: 20,
+    flexDirection: 'column',
+    marginBottom: 20,
   },
   button: {
-    backgroundColor: '#8a9ddbff',
-    padding: 10,
-    marginVertical: 5,
-    borderRadius: 5,
+    backgroundColor: '#8a9ddb',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    margin: 5,
   },
   buttonDisabled: {
-    backgroundColor: '#6c6c6cff',
-    padding: 10,
-    marginVertical: 5,
-    borderRadius: 5,
-    userSelect: 'none',
+    backgroundColor: '#cccccc',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    margin: 5,
   },
   buttonText: {
-    color: '#000000',
+    color: '#ffffff',
     textAlign: 'center',
+    fontWeight: 'bold',
   },
 });
