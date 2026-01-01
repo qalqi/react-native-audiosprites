@@ -6,10 +6,14 @@ const MOCK_MANIFEST_AUDIO = require('./audiosprite.json');
 // Mock Web Audio API
 class MockGainNode {
   context: MockAudioContext;
-  gain: { setValueAtTime: jest.Mock };
+  gain: { setValueAtTime: jest.Mock; value: number; setTargetAtTime: jest.Mock };
   constructor(ctx: MockAudioContext) {
     this.context = ctx;
-    this.gain = { setValueAtTime: jest.fn() };
+    this.gain = {
+      setValueAtTime: jest.fn(),
+      value: 1,
+      setTargetAtTime: jest.fn(),
+    };
   }
   connect = jest.fn();
 }
@@ -26,6 +30,7 @@ class MockBufferSourceNode {
   }
   connect = jest.fn();
   start = jest.fn();
+  disconnect = jest.fn();
 }
 class MockAudioContext {
   currentTime = 0;
@@ -111,6 +116,78 @@ describe('@audiosprites/player (Web)', () => {
       fetch: mockFetch,
       platform: 'web',
     });
+  });
+
+  it('constructor() should initialize gain nodes and mixer graph', () => {
+    // Check if gain nodes are created
+    expect(audioContext.createGain).toHaveBeenCalledTimes(3);
+
+    // Get the created gain node instances
+    const gainNodes = audioContext.createGain.mock.results.map((r) => r.value);
+    const masterGain = gainNodes[0];
+    const sfxGain = gainNodes[1];
+    const musicGain = gainNodes[2];
+
+    // Verify connections
+    // Master -> Destination
+    expect(masterGain.connect).toHaveBeenCalledWith(audioContext.destination);
+
+    // Channels -> Master
+    expect(sfxGain.connect).toHaveBeenCalledWith(masterGain);
+    expect(musicGain.connect).toHaveBeenCalledWith(masterGain);
+  });
+
+  it('volume setters should call setTargetAtTime on gain nodes', () => {
+    // Master Volume
+    player.volume = 0.5;
+    const masterGain = (player as any).masterGain;
+    expect(masterGain.gain.setTargetAtTime).toHaveBeenCalledWith(
+      0.5,
+      expect.any(Number),
+      0.02
+    );
+
+    // Music Volume
+    player.setMusicVolume(0.3);
+    const musicGain = (player as any).musicGain;
+    expect(musicGain.gain.setTargetAtTime).toHaveBeenCalledWith(
+      0.3,
+      expect.any(Number),
+      0.02
+    );
+
+    // SFX Volume
+    player.setSFXVolume(0.8);
+    const sfxGain = (player as any).sfxGain;
+    expect(sfxGain.gain.setTargetAtTime).toHaveBeenCalledWith(
+      0.8,
+      expect.any(Number),
+      0.02
+    );
+  });
+
+  it('play() should route to sfx channel by default', async () => {
+    await player.load('http://localhost/sprite.json');
+    player.play('Sound_1');
+
+    const sourceResult = audioContext.createBufferSource.mock.results[0];
+    const source = sourceResult.value;
+    const sfxGain = (player as any).sfxGain;
+
+    // Check connection to SFX gain node
+    expect(source.connect).toHaveBeenCalledWith(sfxGain);
+  });
+
+  it('play() should route to music channel when specified', async () => {
+    await player.load('http://localhost/sprite.json');
+    player.play('Sound_1', { channel: 'music' });
+
+    const sourceResult = audioContext.createBufferSource.mock.results[0];
+    const source = sourceResult.value;
+    const musicGain = (player as any).musicGain;
+
+    // Check connection to Music gain node
+    expect(source.connect).toHaveBeenCalledWith(musicGain);
   });
 
   it('load() should fetch manifest and first resource', async () => {
