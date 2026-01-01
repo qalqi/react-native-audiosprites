@@ -27,6 +27,18 @@ audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg
 
 This command will generate `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a`, and `mygameaudio.ac3` in the `src/__tests__/sounds/` directory.
 
+/**
+ * ⚠️ ANDROID RESOURCE CONFLICT FIX ⚠️
+ * * Android's build system (Gradle) generates resource IDs based on filenames WITHOUT extensions.
+ * If we generate "game_go_v2.mp3" and "game_go_v2.json", Android sees them both
+ * as the resource ID `R.raw.game_go_v2`, causing a "Duplicate resources" build error.
+ * * To fix this, this script automatically renames the generated JSON file to:
+ * `${outputFileName}_data.json`
+ * * Result:
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
+
 ### Looping Sounds
 
 You can create looping sounds by using the `--loop` option with the `audiosprite` command. The value of the `--loop` option should be the name of the sound you want to loop.
@@ -333,6 +345,18 @@ audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg
 
 ఈ కమాండ్ `src/__tests__/sounds/` డైరెక్టరీలో `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a`, మరియు `mygameaudio.ac3` ఫైళ్లను సృష్టిస్తుంది.
 
+/**
+ * ⚠️ ANDROID వనరుల సంఘర్షణ పరిష్కారం ⚠️
+ * * Android బిల్డ్ సిస్టమ్ (Gradle) ఎక్స్‌టెన్షన్‌లు లేకుండా ఫైల్‌నేమ్‌ల ఆధారంగా వనరుల IDలను సృష్టిస్తుంది.
+ * ఒకవేళ మనం "game_go_v2.mp3" మరియు "game_go_v2.json"ను రూపొందిస్తే, Android రెండింటినీ
+ * `R.raw.game_go_v2` అనే ఒకే వనరు IDగా చూస్తుంది, దీనివల్ల "డూప్లికేట్ వనరులు" బిల్డ్ ఎర్రర్ వస్తుంది.
+ * * దీన్ని పరిష్కరించడానికి, రూపొందించిన JSON ఫైల్ పేరును ఈ విధంగా మార్చాలి:
+ * `${outputFileName}_data.json`
+ * * ఫలితం:
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
+
 ### లూపింగ్ సౌండ్స్ (Looping Sounds)
 
 మీరు `audiosprite` కమాండ్‌తో `--loop` ఎంపికను ఉపయోగించి లూపింగ్ శబ్దాలను సృష్టించవచ్చు. `--loop` ఎంపిక యొక్క విలువ మీరు లూప్ చేయాలనుకుంటున్న శబ్దం పేరు అయి ఉండాలి.
@@ -630,6 +654,18 @@ audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg
 
 Este comando generará `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a` y `mygameaudio.ac3` en el directorio `src/__tests__/sounds/`.
 
+/**
+ * ⚠️ SOLUCIÓN DE CONFLICTO DE RECURSOS DE ANDROID ⚠️
+ * * El sistema de compilación de Android (Gradle) genera ID de recursos basados en nombres de archivo SIN extensiones.
+ * Si generamos "game_go_v2.mp3" y "game_go_v2.json", Android los ve a ambos
+ * como el ID de recurso `R.raw.game_go_v2`, lo que causa un error de compilación de "Recursos duplicados".
+ * * Para solucionar esto, renombre el archivo JSON generado a:
+ * `${outputFileName}_data.json`
+ * * Resultado:
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
+
 ### Sonidos en Bucle
 
 Puedes crear sonidos en bucle usando la opción `--loop` con el comando `audiosprite`. El valor de la opción `--loop` debe ser el nombre del sonido que deseas repetir.
@@ -896,6 +932,18 @@ audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg
 ```
 
 Эта команда создаст `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a` и `mygameaudio.ac3` в каталоге `src/__tests__/sounds/`.
+
+/**
+ * ⚠️ ИСПРАВЛЕНИЕ КОНФЛИКТА РЕСУРСОВ ANDROID ⚠️
+ * * Система сборки Android (Gradle) генерирует идентификаторы ресурсов на основе имен файлов БЕЗ расширений.
+ * Если мы сгенерируем "game_go_v2.mp3" и "game_go_v2.json", Android увидит их обоих
+ * как идентификатор ресурса `R.raw.game_go_v2`, что вызовет ошибку сборки "Дублирующиеся ресурсы".
+ * * Чтобы исправить это, переименуйте сгенерированный файл JSON в:
+ * `${outputFileName}_data.json`
+ * * Результат:
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
 
 ### Зацикленные звуки
 
@@ -1164,6 +1212,18 @@ audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg
 
 यह कमांड `src/__tests__/sounds/` डायरेक्टरी में `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a`, और `mygameaudio.ac3` उत्पन्न करेगा।
 
+/**
+ * ⚠️ Android संसाधन संघर्ष सुधार ⚠️
+ * * Android की बिल्ड सिस्टम (Gradle) फ़ाइल नामों के आधार पर संसाधन ID उत्पन्न करती है बिना एक्सटेंशन के।
+ * यदि हम "game_go_v2.mp3" और "game_go_v2.json" उत्पन्न करते हैं, तो Android उन दोनों को
+ * `R.raw.game_go_v2` संसाधन ID के रूप में देखता है, जिससे "डुप्लिकेट संसाधन" बिल्ड त्रुटि होती है।
+ * * इसे ठीक करने के लिए, उत्पन्न JSON फ़ाइल का नाम बदलकर यह करें:
+ * `${outputFileName}_data.json`
+ * * परिणाम:
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
+
 ### लूपिंग ध्वनियाँ
 
 आप `audiosprite` कमांड के साथ `--loop` विकल्प का उपयोग करके लूपिंग ध्वनियाँ बना सकते हैं। `--loop` विकल्प का मान उस ध्वनि का नाम होना चाहिए जिसे आप लूप करना चाहते हैं।
@@ -1430,6 +1490,18 @@ audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg
 ```
 
 此命令将在 `src/__tests__/sounds/` 目录中生成 `mygameaudio.json`、`mygameaudio.mp3`、`mygameaudio.ogg`、`mygameaudio.m4a` 和 `mygameaudio.ac3`。
+
+/**
+ * ⚠️ ANDROID 资源冲突修复 ⚠️
+ * * Android 的构建系统 (Gradle) 基于不带扩展名的文件名生成资源 ID。
+ * 如果我们生成 "game_go_v2.mp3" 和 "game_go_v2.json"，Android 会将它们都视为
+ * 资源 ID `R.raw.game_go_v2`，从而导致“重复资源”构建错误。
+ * * 要修复此问题，请将生成的 JSON 文件重命名为：
+ * `${outputFileName}_data.json`
+ * * 结果：
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
 
 ### 循环声音
 
