@@ -495,7 +495,11 @@ export default function App() {
   const playSound = (soundName: string) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName);
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
       console.log(`శబ్దాన్ని ప్లే చేస్తోంది: ${soundName}`);
     } else {
       console.warn('ప్లేయర్ ఇంకా లోడ్ కాలేదు.');
