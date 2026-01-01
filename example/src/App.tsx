@@ -4,9 +4,11 @@ import {
   Text,
   Platform,
   TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
 } from 'react-native';
 import { AudioSpritePlayer } from '../../src';
-// Assuming the configuration tool is AudioManager or AudioSession
 import { AudioManager, AudioContext } from 'react-native-audio-api';
 import { useEffect, useState, useRef } from 'react';
 import { Asset } from 'expo-asset';
@@ -14,45 +16,44 @@ import { fetch } from 'expo/fetch';
 import manifest from '../assets/mygameaudio.json';
 import Slider from '@react-native-community/slider';
 
-// Import the audio asset using require, which gives an Asset object/reference
+// Assuming the audio asset is locally available
 const audioAsset = require('../assets/mygameaudio.mp3');
+
+// --- THEME CONSTANTS ---
+const COLORS = {
+  background: '#F5F7FA',
+  card: '#FFFFFF',
+  text: '#1F2937',
+  textSecondary: '#6B7280',
+  primary: '#4F46E5', // Indigo
+  primaryDisabled: '#A5B4FC',
+  music: '#10B981', // Emerald
+  musicDisabled: '#A7F3D0',
+  danger: '#EF4444',
+  border: '#E5E7EB',
+};
 
 export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [audiouri, setAudiouri] = useState<string | null>(null);
-  // 🚨 CHANGE 1: Use useRef to store the player instance, bypassing useState instability
   const playerRef = useRef<AudioSpritePlayer | null>(null);
-
-  // const audioContextRef = useRef<AudioContext | null>(null);
-  // if (!audioContextRef.current) {
-  //   audioContextRef.current = new AudioContext();
-  // }
-
-  // const audioBufferQueue = audioContextRef.current.createBufferQueueSource();
-  // audioBufferQueue.connect(audioContextRef.current.destination);
-  // audioBufferQueue.start(audioContextRef.current.currentTime);
-  // audioBufferQueue.onEnded = (event) => {
-  //   console.log(event.bufferId, 'bufferId', event.isLast);
-  //   //setting callback
-  //   if (event.bufferId === undefined) {
-  //     console.log('queue source node has been stopped');
-  //   } else {
-  //     console.log(`buffer with id ${event.bufferId} ended`);
-  //   }
-  // };
 
   useEffect(() => {
     const loadAudioAsset = async () => {
-      const asset = Asset.fromModule(audioAsset);
-      await asset.downloadAsync();
-      const audioUri = asset.localUri || asset.uri;
+      try {
+        const asset = Asset.fromModule(audioAsset);
+        await asset.downloadAsync();
+        const audioUri = asset.localUri || asset.uri;
 
-      if (!audioUri) {
-        console.error('Failed to get audio URI.');
-        return;
+        if (!audioUri) {
+          console.error('Failed to get audio URI.');
+          return;
+        }
+        console.log('audioUri: ', audioUri);
+        setAudiouri(audioUri);
+      } catch (err) {
+        console.error('Error loading asset', err);
       }
-      console.log('audioUri: ', audioUri);
-      setAudiouri(audioUri);
     };
 
     loadAudioAsset();
@@ -64,7 +65,6 @@ export default function App() {
       return;
     }
 
-    // 🚨 IOS FIX: Configure AudioManager (essential for mute bypass)
     if (
       Platform.OS === 'ios' &&
       AudioManager &&
@@ -76,16 +76,12 @@ export default function App() {
           iosOptions: ['mixWithOthers', 'duckOthers'],
           iosAllowHaptics: false,
         });
-        // 🚨 CRITICAL: Activate the session immediately after configuring
         await AudioManager.setAudioSessionActivity(true);
-        console.log('iOS Audio session configured and activated.');
       } catch (e) {
         console.error('Failed to configure AudioSession options:', e);
       }
     }
-    // --------------------------------------------------------------------------
 
-    // 2. Initialize and load the AudioSpritePlayer
     const audioContext = new AudioContext();
     const audioPlayer = new AudioSpritePlayer({
       audioContext,
@@ -93,17 +89,10 @@ export default function App() {
       platform: Platform.OS,
     });
 
-    // Pass the *URI* to the load function
     audioPlayer
       .load(manifest, audiouri)
       .then(() => {
-        // WARMUP PLAY: Activates the audio route on iOS (essential for first play)
-        //audioPlayer.play('Sound_1');
-
-        console.log(
-          'Audio sprite loaded successfully and played warmup sound.'
-        );
-        // 🚨 CHANGE 2: Store player in ref and update simple state flag
+        console.log('Audio sprite loaded successfully.');
         playerRef.current = audioPlayer;
         setIsLoaded(true);
       })
@@ -112,247 +101,318 @@ export default function App() {
       });
   };
 
-  // 🚨 CHANGE 3: Use the ref to access the stable player instance
   const playSound = (
     soundName: string,
-    options?: {
-      channel?: 'sfx' | 'music';
-      loop?: boolean;
-    }
+    options?: { channel?: 'sfx' | 'music'; loop?: boolean }
   ) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      // The buffer should now be stable inside the ref-managed instance.
       player.play(soundName, options);
-
-      console.log(`Playing sound: ${soundName}`);
     } else {
-      console.warn('Player not loaded. Press "Load Player" first.');
+      console.warn('Player not loaded.');
     }
   };
 
-  const stopBGM = () => {
-    const player = playerRef.current;
-    if (player) {
-      player.stop();
-    }
-  };
-
-  const setMusicVolume = (val: number) => {
-    const player = playerRef.current;
-    if (player) {
-      player.setMusicVolume(val);
-    }
-  };
-
-  const setSFXVolume = (val: number) => {
-    const player = playerRef.current;
-    if (player) {
-      player.setSFXVolume(val);
-    }
-  };
-
+  const stopBGM = () => playerRef.current?.stop();
+  const setMusicVolume = (val: number) =>
+    playerRef.current?.setMusicVolume(val);
+  const setSFXVolume = (val: number) => playerRef.current?.setSFXVolume(val);
   const setMasterVolume = (val: number) => {
-    const player = playerRef.current;
-    if (player) {
-      player.volume = val;
-    }
+    if (playerRef.current) playerRef.current.volume = val;
   };
+
+  // --- REUSABLE UI COMPONENTS ---
+  const ActionButton = ({
+    onPress,
+    title,
+    disabled,
+    variant = 'primary',
+    style,
+  }: any) => {
+    const getBgColor = () => {
+      if (disabled) {
+        if (variant === 'music') return COLORS.musicDisabled;
+        return COLORS.primaryDisabled;
+      }
+      if (variant === 'music') return COLORS.music;
+      if (variant === 'danger') return COLORS.danger;
+      return COLORS.primary;
+    };
+
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={disabled}
+        activeOpacity={0.8}
+        style={[styles.buttonBase, { backgroundColor: getBgColor() }, style]}
+      >
+        <Text style={styles.buttonText}>{title}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const VolumeSlider = ({ label, onValueChange }: any) => (
+    <View style={styles.sliderRow}>
+      <Text style={styles.sliderLabel}>{label}</Text>
+      <Slider
+        style={styles.slider}
+        minimumValue={0}
+        maximumValue={1}
+        step={0.05}
+        value={1}
+        minimumTrackTintColor={COLORS.primary}
+        maximumTrackTintColor={COLORS.border}
+        thumbTintColor={COLORS.primary}
+        onValueChange={onValueChange}
+        disabled={!isLoaded}
+      />
+    </View>
+  );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>
-        react-native-audiosprites - AudioSprite Player
-      </Text>
-      <Text style={styles.subtitle}>
-        Suggestion: Implement the sound loading/playback based on the Chrome
-        Autoplay policy guidelines detailed here:
-        https://developer.chrome.com/blog/autoplay similar to this example.
-      </Text>
-      <TouchableOpacity
-        onPress={() => loadPlayer()}
-        style={!audiouri ? styles.buttonDisabled : styles.button}
-        disabled={!audiouri}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.buttonText}>Load Player</Text>
-      </TouchableOpacity>
+        <View style={styles.responsiveContainer}>
+          {/* HEADER */}
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Example Demo</Text>
+            <Text style={styles.subtitle}>react-native-audiosprites</Text>
+            {Platform.OS === 'web' && (
+              <Text style={styles.subtitle}>
+                Suggestion: Implement the sound loading/playback based on the
+                Chrome Autoplay policy guidelines detailed here:
+                https://developer.chrome.com/blog/autoplay similar to this
+                example.
+              </Text>
+            )}
+          </View>
 
-      <View style={styles.buttonsContainer}>
-        <TouchableOpacity
-          onPress={() => playSound('Sound_1')}
-          style={isLoaded ? styles.button : styles.buttonDisabled}
-          disabled={!isLoaded}
-        >
-          <Text style={styles.buttonText}>Play Sound 1</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => playSound('Sound_2')}
-          style={isLoaded ? styles.button : styles.buttonDisabled}
-          disabled={!isLoaded}
-        >
-          <Text style={styles.buttonText}>Play Sound 2</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => playSound('Sound_3')}
-          style={isLoaded ? styles.button : styles.buttonDisabled}
-          disabled={!isLoaded}
-        >
-          <Text style={styles.buttonText}>Play Sound 3</Text>
-        </TouchableOpacity>
-      </View>
+          {/* INITIALIZATION CARD */}
+          {!isLoaded && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Setup</Text>
+              <Text style={styles.helperText}>
+                Initialize the audio engine to begin playback.
+              </Text>
+              <ActionButton
+                title={audiouri ? 'Initialize Player' : 'Loading Assets...'}
+                onPress={loadPlayer}
+                disabled={!audiouri}
+              />
+            </View>
+          )}
 
-      <View style={styles.buttonsContainer}>
-        <TouchableOpacity
-          onPress={() => playSound('bg_loop', { channel: 'music' })}
-          style={isLoaded ? styles.button : styles.buttonDisabled}
-          disabled={!isLoaded}
-        >
-          <Text style={styles.buttonText}>Play Background Music Loop</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={stopBGM}
-          style={isLoaded ? styles.button : styles.buttonDisabled}
-          disabled={!isLoaded}
-        >
-          <Text style={styles.buttonText}>Stop Background Music(BGM) Loop</Text>
-        </TouchableOpacity>
-      </View>
+          {/* SOUNDBOARD CARD */}
+          <View style={[styles.card, !isLoaded && styles.cardDisabled]}>
+            <Text style={styles.cardTitle}>Soundboard (SFX)</Text>
+            <View style={styles.gridContainer}>
+              <ActionButton
+                title="1"
+                onPress={() => playSound('Sound_1')}
+                disabled={!isLoaded}
+                style={styles.gridButton}
+              />
+              <ActionButton
+                title="2"
+                onPress={() => playSound('Sound_2')}
+                disabled={!isLoaded}
+                style={styles.gridButton}
+              />
+              <ActionButton
+                title="3"
+                onPress={() => playSound('Sound_3')}
+                disabled={!isLoaded}
+                style={styles.gridButton}
+              />
+            </View>
+          </View>
 
-      <Text style={styles.sectionHeader}>Volume Controls</Text>
+          {/* MUSIC CARD */}
+          <View style={[styles.card, !isLoaded && styles.cardDisabled]}>
+            <Text style={styles.cardTitle}>Background Music</Text>
+            <View style={styles.rowContainer}>
+              <ActionButton
+                title="▶ Play Loop"
+                variant="music"
+                onPress={() =>
+                  playSound('bg_loop', { channel: 'music', loop: true })
+                }
+                disabled={!isLoaded}
+                style={styles.flexButton}
+              />
+              <ActionButton
+                title="⏹ Stop"
+                variant="danger"
+                onPress={stopBGM}
+                disabled={!isLoaded}
+                style={styles.flexButton}
+              />
+            </View>
+          </View>
 
-      {/* Master Volume */}
-      <View style={styles.sliderContainer}>
-        <Text style={styles.sliderLabel}>Master Volume</Text>
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={1}
-          step={0.05}
-          value={1}
-          onValueChange={setMasterVolume}
-          disabled={!isLoaded}
-        />
-      </View>
+          {/* MIXER CARD */}
+          <View style={[styles.card, !isLoaded && styles.cardDisabled]}>
+            <View style={styles.rowSpaceBetween}>
+              <Text style={styles.cardTitle}>Audio Mixer</Text>
+              <View style={styles.miniButtonRow}>
+                <TouchableOpacity
+                  onPress={() => setMasterVolume(0)}
+                  disabled={!isLoaded}
+                >
+                  <Text style={styles.linkText}>Mute</Text>
+                </TouchableOpacity>
+                <Text style={{ color: COLORS.border }}> | </Text>
+                <TouchableOpacity
+                  onPress={() => setMasterVolume(1)}
+                  disabled={!isLoaded}
+                >
+                  <Text style={styles.linkText}>Max</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
-      {/* Music Volume */}
-      <View style={styles.sliderContainer}>
-        <Text style={styles.sliderLabel}>Music Volume</Text>
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={1}
-          step={0.05}
-          value={1}
-          onValueChange={setMusicVolume}
-          disabled={!isLoaded}
-        />
-      </View>
-
-      {/* SFX Volume */}
-      <View style={styles.sliderContainer}>
-        <Text style={styles.sliderLabel}>SFX Volume</Text>
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={1}
-          step={0.05}
-          value={1}
-          onValueChange={setSFXVolume}
-          disabled={!isLoaded}
-        />
-      </View>
-
-      <View style={styles.volumeContainer}>
-        <TouchableOpacity
-          onPress={() => setMasterVolume(0)}
-          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
-          disabled={!isLoaded}
-        >
-          <Text style={styles.buttonText}>Mute All</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setMasterVolume(1)}
-          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
-          disabled={!isLoaded}
-        >
-          <Text style={styles.buttonText}>Unmute All</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+            <VolumeSlider label="Master" onValueChange={setMasterVolume} />
+            <VolumeSlider label="Music" onValueChange={setMusicVolume} />
+            <VolumeSlider label="SFX" onValueChange={setSFXVolume} />
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  scrollContainer: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f0f0f0',
+  },
+  // Wrapper to ensure Web doesn't stretch too wide
+  responsiveContainer: {
+    width: '100%',
+    maxWidth: 500,
+    flexDirection: 'column',
+    gap: 16,
+  },
+  headerContainer: {
+    marginTop: 16,
+    marginBottom: 8,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    margin: 6,
+    fontSize: 28,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: -0.5,
   },
   subtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+  },
+
+  // Card Styles
+  card: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3, // Android shadow
+  },
+  cardDisabled: {
+    opacity: 0.5,
+  },
+  cardTitle: {
     fontSize: 16,
-    margin: 9,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  buttonsContainer: {
-    marginTop: 20,
-    flexDirection: 'column',
-    marginBottom: 20,
+  helperText: {
+    color: COLORS.textSecondary,
+    marginBottom: 16,
+    fontSize: 14,
   },
-  button: {
-    backgroundColor: '#8a9ddb',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    margin: 5,
+
+  // Layout Helpers
+  gridContainer: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  buttonDisabled: {
-    backgroundColor: '#cccccc',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    margin: 5,
+  rowContainer: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  buttonText: {
-    color: '#ffffff',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  sectionHeader: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 15,
-    marginBottom: 10,
-  },
-  volumeContainer: {
+  rowSpaceBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '80%',
-    marginBottom: 10,
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  volumeButton: {
-    backgroundColor: '#556b2f',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 8,
+  miniButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16, // align with title
+  },
+
+  // Buttons
+  buttonBase: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  gridButton: {
     flex: 1,
-    marginHorizontal: 5,
+    aspectRatio: 1, // Makes them square
   },
-  sliderContainer: {
-    width: '80%',
-    marginVertical: 10,
+  flexButton: {
+    flex: 1,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  linkText: {
+    color: COLORS.primary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // Sliders
+  sliderRow: {
+    marginBottom: 16,
   },
   sliderLabel: {
-    fontSize: 16,
-    marginBottom: 5,
-    textAlign: 'center',
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+    marginBottom: 6,
   },
   slider: {
     width: '100%',
     height: 40,
-  },
+    // Fix for web to ensure cursor works well
+    cursor: 'pointer',
+  } as any, // 'as any' bypasses TS check for 'cursor' on native types
 });

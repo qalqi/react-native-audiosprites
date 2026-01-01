@@ -32,12 +32,14 @@ This command will generate `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.o
  * * Android's build system (Gradle) generates resource IDs based on filenames WITHOUT extensions.
  * If we generate "game_go_v2.mp3" and "game_go_v2.json", Android sees them both
  * as the resource ID `R.raw.game_go_v2`, causing a "Duplicate resources" build error.
- * * To fix this, this script automatically renames the generated JSON file to:
+ * * To fix this, make a script to automatically rename the generated JSON file to:
  * `${outputFileName}_data.json`
  * * Result:
  * - game_go_v2.mp3      -> R.raw.game_go_v2
  * - game_go_v2_data.json -> R.raw.game_go_v2_data
  */
+
+![Example Demo](example_demo.png)
 
 ### Looping Sounds
 
