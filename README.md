@@ -27,6 +27,20 @@ audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg
 
 This command will generate `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a`, and `mygameaudio.ac3` in the `src/__tests__/sounds/` directory.
 
+/**
+ * ⚠️ ANDROID RESOURCE CONFLICT FIX ⚠️
+ * * Android's build system (Gradle) generates resource IDs based on filenames WITHOUT extensions.
+ * If we generate "game_go_v2.mp3" and "game_go_v2.json", Android sees them both
+ * as the resource ID `R.raw.game_go_v2`, causing a "Duplicate resources" build error.
+ * * To fix this, make a script to automatically rename the generated JSON file to:
+ * `${outputFileName}_data.json`
+ * * Result:
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
+
+![Example Demo](example_demo.png)
+
 ### Looping Sounds
 
 You can create looping sounds by using the `--loop` option with the `audiosprite` command. The value of the `--loop` option should be the name of the sound you want to loop.
@@ -40,6 +54,40 @@ audiosprite --output audiosprite --format howler --loop "bg_music" --path ./src/
 When you play a looping sound, it will play continuously until you stop it using the `player.stop()` method. The looping functionality is supported on both web and mobile platforms.
 
 Then, you can use the `AudioSpritePlayer` to play the sounds from the sprite.
+
+### Type Safety for Native Audio Extensions
+
+This library includes robust type definitions for `react-native-audio-api` extensions, such as `createBufferQueueSource`. These types are automatically generated and synchronized with the native audio library version `0.10.1`.
+
+### Audio Routing and Volume Control (Mixer Graph)
+
+The library features a mixer graph that allows you to control the volume of Sound Effects (SFX) and Music separately, as well as a global Master volume.
+
+-   `sfx`: Short sound effects (coins, jumps, UI). High priority.
+-   `music`: Background tracks. Lower priority.
+
+You can specify the channel when playing a sound:
+
+```typescript
+// Play on 'sfx' channel (default)
+player.play('coin_sound');
+
+// Play on 'music' channel
+player.play('bg_music', { channel: 'music' });
+```
+
+You can control the volume dynamically:
+
+```typescript
+// Set Music Volume (0.0 to 1.0)
+player.setMusicVolume(0.5);
+
+// Set SFX Volume (0.0 to 1.0)
+player.setSFXVolume(0.8);
+
+// Set Master Volume (affects both)
+player.volume = 1.0;
+```
 
 ### Browser Environment
 
@@ -159,7 +207,12 @@ export default function App() {
   const playSound = (soundName: string) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName);
+      // Play on music channel
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
       console.log(`Playing sound: ${soundName}`);
     } else {
       console.warn('Player not loaded yet.');
@@ -263,6 +316,315 @@ Made with [create-react-native-library](https://github.com/callstack/react-nativ
 
 # Translations
 
+## Telugu
+
+![react-native-audiosprites_poster](react-native-audiosprites_poster.jpg)
+
+# react-native-audiosprites
+
+'audiosprite' టూల్ ద్వారా రూపొందించబడిన ఆడియో స్ప్రైట్‌ల కోసం ఒక యూనివర్సల్ ప్లేయర్.
+ఒకే సమయంలో అనేక శబ్దాలను ప్లే చేయడానికి మద్దతు ఇస్తుంది!
+
+## ఇన్‌స్టాలేషన్
+
+```sh
+npm install react-native-audiosprites
+```
+
+```sh
+yarn add react-native-audiosprites
+```
+
+## వినియోగం
+
+ముందుగా, మీరు `audiosprite` టూల్‌ను ఉపయోగించి ఆడియో స్ప్రైట్ మరియు JSON మానిఫెస్ట్ ఫైల్‌ను రూపొందించాలి.
+
+మీరు [`audiosprite`](https://www.npmjs.com/package/audiosprite)ని గ్లోబల్‌గా ఇన్‌స్టాల్ చేశారని అనుకుందాం:
+
+```sh
+audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg_loop" src/__tests__/sounds/bg_loop.wav src/__tests__/sounds/Sound_1.m4a src/__tests__/sounds/Sound_2.m4a src/__tests__/sounds/Sound_3.m4a src/__tests__/sounds/Sound_4.m4a
+```
+
+ఈ కమాండ్ `src/__tests__/sounds/` డైరెక్టరీలో `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a`, మరియు `mygameaudio.ac3` ఫైళ్లను సృష్టిస్తుంది.
+
+/**
+ * ⚠️ ANDROID వనరుల సంఘర్షణ పరిష్కారం ⚠️
+ * * Android బిల్డ్ సిస్టమ్ (Gradle) ఎక్స్‌టెన్షన్‌లు లేకుండా ఫైల్‌నేమ్‌ల ఆధారంగా వనరుల IDలను సృష్టిస్తుంది.
+ * ఒకవేళ మనం "game_go_v2.mp3" మరియు "game_go_v2.json"ను రూపొందిస్తే, Android రెండింటినీ
+ * `R.raw.game_go_v2` అనే ఒకే వనరు IDగా చూస్తుంది, దీనివల్ల "డూప్లికేట్ వనరులు" బిల్డ్ ఎర్రర్ వస్తుంది.
+ * * దీన్ని పరిష్కరించడానికి, రూపొందించిన JSON ఫైల్ పేరును ఈ విధంగా మార్చాలి:
+ * `${outputFileName}_data.json`
+ * * ఫలితం:
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
+
+### లూపింగ్ సౌండ్స్ (Looping Sounds)
+
+మీరు `audiosprite` కమాండ్‌తో `--loop` ఎంపికను ఉపయోగించి లూపింగ్ శబ్దాలను సృష్టించవచ్చు. `--loop` ఎంపిక యొక్క విలువ మీరు లూప్ చేయాలనుకుంటున్న శబ్దం పేరు అయి ఉండాలి.
+
+ఉదాహరణకు, `bg_music` శబ్దాన్ని లూప్ చేయడానికి, మీరు ఈ కింది కమాండ్‌ను ఉపయోగిస్తారు:
+
+```sh
+audiosprite --output audiosprite --format howler --loop "bg_music" --path ./src/__tests__/ Sound_1.m4a Sound_2.m4a Sound_3.m4a Sound_4.m4a bg_music.wav
+```
+
+మీరు లూపింగ్ శబ్దాన్ని ప్లే చేసినప్పుడు, మీరు `player.stop()` పద్ధతిని ఉపయోగించి దాన్ని ఆపే వరకు అది నిరంతరాయంగా ప్లే అవుతూనే ఉంటుంది. వెబ్ మరియు మొబైల్ ప్లాట్‌ఫారమ్‌లలో లూపింగ్ ఫంక్షనాలిటీకి మద్దతు ఉంది.
+
+తరువాత, మీరు స్ప్రైట్ నుండి శబ్దాలను ప్లే చేయడానికి `AudioSpritePlayer`ని ఉపయోగించవచ్చు.
+
+### ఆడియో రూటింగ్ మరియు వాల్యూమ్ నియంత్రణ (మిక్సర్ గ్రాఫ్)
+
+ఈ లైబ్రరీ మిక్సర్ గ్రాఫ్ ఫీచర్‌ను కలిగి ఉంది, ఇది సౌండ్ ఎఫెక్ట్స్ (SFX) మరియు మ్యూజిక్ వాల్యూమ్‌లను విడివిడిగా, అలాగే గ్లోబల్ మాస్టర్ వాల్యూమ్‌ను నియంత్రించడానికి మిమ్మల్ని అనుమతిస్తుంది.
+
+-   `sfx`: చిన్న సౌండ్ ఎఫెక్ట్స్ (కాయిన్స్, జంప్స్, UI). అధిక ప్రాధాన్యత.
+-   `music`: నేపథ్య ట్రాక్‌లు (Background tracks). తక్కువ ప్రాధాన్యత.
+
+శబ్దాన్ని ప్లే చేస్తున్నప్పుడు మీరు ఛానెల్‌ని పేర్కొనవచ్చు:
+
+```typescript
+// 'sfx' ఛానెల్‌లో ప్లే చేయండి (డిఫాల్ట్)
+player.play('coin_sound');
+
+// 'music' ఛానెల్‌లో ప్లే చేయండి
+player.play('bg_music', { channel: 'music' });
+```
+
+మీరు వాల్యూమ్‌ను డైనమిక్‌గా నియంత్రించవచ్చు:
+
+```typescript
+// మ్యూజిక్ వాల్యూమ్‌ను సెట్ చేయండి (0.0 నుండి 1.0)
+player.setMusicVolume(0.5);
+
+// SFX వాల్యూమ్‌ను సెట్ చేయండి (0.0 నుండి 1.0)
+player.setSFXVolume(0.8);
+
+// మాస్టర్ వాల్యూమ్‌ను సెట్ చేయండి (రెండింటినీ ప్రభావితం చేస్తుంది)
+player.volume = 1.0;
+```
+
+### బ్రౌజర్ ఎన్విరాన్మెంట్ (Browser Environment)
+
+```typescript
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+
+const player = new AudioSpritePlayer({
+  platform: 'web',
+});
+
+async function playSound(soundName: string) {
+  try {
+    // ఆడియో స్ప్రైట్ మానిఫెస్ట్ మరియు ఆడియో ఫైళ్లను లోడ్ చేయండి
+    // మీ audiosprite.json ఫైల్ పాత్‌ను సరిచూసుకోండి
+    await player.load('./src/__tests__/sounds/mygameaudio.json');
+    console.log('ఆడియో స్ప్రైట్ విజయవంతంగా లోడ్ అయింది.');
+
+    // స్ప్రైట్‌మ్యాప్ నుండి శబ్దాన్ని ప్లే చేయండి
+    player.play(soundName);
+    console.log(`శబ్దాన్ని ప్లే చేస్తోంది: ${soundName}`);
+  } catch (error) {
+    console.error('శబ్దాన్ని ప్లే చేయడంలో లోపం:', error);
+  }
+}
+
+function stopSound() {
+  player.stop();
+  console.log('లూపింగ్ శబ్దం ఆగిపోయింది.');
+}
+
+// వినియోగ ఉదాహరణ:
+playSound('Sound_1');
+// playSound('Sound_2');
+// లూపింగ్ శబ్దాన్ని ఆపడానికి:
+// stopSound();
+```
+
+### రియాక్ట్ నేటివ్ ఎన్విరాన్మెంట్ (React Native Environment)
+
+రియాక్ట్ నేటివ్ కోసం, ఆడియో ప్లేబ్యాక్ మరియు అసెట్ లోడింగ్‌ను నిర్వహించడానికి మీకు `react-native-audio-api` మరియు `expo-asset` అవసరం.
+
+ముందుగా, డిపెండెన్సీలను ఇన్‌స్టాల్ చేయండి:
+
+```sh
+npm install react-native-audio-api expo-asset expo-file-system
+# లేదా
+yarn add react-native-audio-api expo-asset expo-file-system
+```
+
+`react-native-audio-api` డాక్యుమెంటేషన్ ప్రకారం `metro.config.js`ని మార్చండి: https://docs.swmansion.com/react-native-audio-api/docs/fundamentals/getting-started
+
+```js
+module.exports = wrapWithAudioAPIMetroConfig(config);
+```
+
+తరువాత, మీరు దీన్ని మీ కాంపోనెంట్‌లో ఉపయోగించవచ్చు:
+
+```typescript
+import { StyleSheet, View, Text, Platform, TouchableOpacity } from 'react-native';
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+import { AudioManager, AudioContext } from 'react-native-audio-api';
+import { useEffect, useState, useRef } from 'react';
+import { Asset } from 'expo-asset';
+import { fetch } from 'expo/fetch';
+import manifest from '../assets/mygameaudio.json';
+
+// ఆడియో అసెట్‌ను ఇంపోర్ట్ చేయండి
+const audioAsset = require('../assets/mygameaudio.mp3');
+
+export default function App() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const playerRef = useRef<AudioSpritePlayer | null>(null);
+
+  useEffect(() => {
+    const loadPlayer = async () => {
+      const asset = Asset.fromModule(audioAsset);
+      await asset.downloadAsync();
+      const audioUri = asset.localUri || asset.uri;
+
+      if (!audioUri) {
+        console.error('ఆడియో URIని పొందడంలో విఫలమైంది.');
+        return;
+      }
+
+      if (Platform.OS === 'ios') {
+        try {
+          await AudioManager.setAudioSessionOptions({
+            iosCategory: 'playback',
+            iosOptions: ['mixWithOthers'],
+          });
+          await AudioManager.setAudioSessionActivity(true);
+        } catch (e) {
+          console.error('AudioSession ఎంపికలను కాన్ఫిగర్ చేయడంలో విఫలమైంది:', e);
+        }
+      }
+
+      const audioContext = new AudioContext();
+      const audioPlayer = new AudioSpritePlayer({
+        audioContext,
+        fetch: fetch.bind(globalThis),
+        platform: Platform.OS,
+      });
+
+      try {
+        await audioPlayer.load(manifest, audioUri);
+        playerRef.current = audioPlayer;
+        setIsLoaded(true);
+        console.log('ఆడియో స్ప్రైట్ విజయవంతంగా లోడ్ అయింది.');
+      } catch (error) {
+        console.error('ఆడియో స్ప్రైట్‌ను లోడ్ చేయడంలో విఫలమైంది:', error);
+      }
+    };
+
+    loadPlayer();
+  }, []);
+
+  const playSound = (soundName: string) => {
+    const player = playerRef.current;
+    if (player && isLoaded) {
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
+      console.log(`శబ్దాన్ని ప్లే చేస్తోంది: ${soundName}`);
+    } else {
+      console.warn('ప్లేయర్ ఇంకా లోడ్ కాలేదు.');
+    }
+  };
+
+  const stopBGM = () => {
+    const player = playerRef.current;
+    if (player) {
+      player.stop();
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text>AudioSprite Player ఉదాహరణ</Text>
+      <TouchableOpacity
+        onPress={() => loadPlayer()}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>ప్లేయర్‌ని లోడ్ చేయండి</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_1')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Sound 1 ప్లే చేయండి</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_2')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Sound 2 ప్లే చేయండి</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('bg_loop')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>బ్యాక్‌గ్రౌండ్ లూప్‌ను ప్లే చేయండి</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={stopBGM}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>BGM ఆపు</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  button: {
+    backgroundColor: '#DDDDDD',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#000000',
+    textAlign: 'center',
+  },
+});
+```
+
+## స్ఫూర్తి (Inspiration)
+
+https://github.com/goldfire/howler.js
+జనరేట్ చేయబడిన json new Howl({
+sprite: {
+key1: [offset, duration, (loop)]
+},
+}); తో కూడా పనిచేస్తుంది.
+
+## సహకారం (Contributing)
+
+- [డెవలప్‌మెంట్ వర్క్‌ఫ్లో](CONTRIBUTING.md#development-workflow)
+- [పుల్ రిక్వెస్ట్ పంపడం](CONTRIBUTING.md#sending-a-pull-request)
+- [ప్రవర్తనా నియమావళి](CODE_OF_CONDUCT.md)
+
+## లైసెన్స్ (License)
+
+MIT
+
+## క్రెడిట్స్ (Credits)
+
+[Shaker, Woda, Conga, Bongo, Templeblock.wav](https://freesound.org/people/kwazi/sounds/34115/) by [kwazi](https://freesound.org/people/kwazi/) | లైసెన్స్: [అట్రిబ్యూషన్ 3.0](http://creativecommons.org/licenses/by/3.0/)
+
+[create-react-native-library](https://github.com/callstack/react-native-builder-bob)తో తయారు చేయబడింది
+
 ## Spanish
 
 ![react-native-audiosprites_poster](react-native-audiosprites_poster.jpg)
@@ -293,6 +655,18 @@ audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg
 ```
 
 Este comando generará `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a` y `mygameaudio.ac3` en el directorio `src/__tests__/sounds/`.
+
+/**
+ * ⚠️ SOLUCIÓN DE CONFLICTO DE RECURSOS DE ANDROID ⚠️
+ * * El sistema de compilación de Android (Gradle) genera ID de recursos basados en nombres de archivo SIN extensiones.
+ * Si generamos "game_go_v2.mp3" y "game_go_v2.json", Android los ve a ambos
+ * como el ID de recurso `R.raw.game_go_v2`, lo que causa un error de compilación de "Recursos duplicados".
+ * * Para solucionar esto, renombre el archivo JSON generado a:
+ * `${outputFileName}_data.json`
+ * * Resultado:
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
 
 ### Sonidos en Bucle
 
@@ -426,7 +800,11 @@ export default function App() {
   const playSound = (soundName: string) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName);
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
       console.log(`Reproduciendo sonido: ${soundName}`);
     } else {
       console.warn('El reproductor aún no se ha cargado.');
@@ -556,6 +934,18 @@ audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg
 ```
 
 Эта команда создаст `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a` и `mygameaudio.ac3` в каталоге `src/__tests__/sounds/`.
+
+/**
+ * ⚠️ ИСПРАВЛЕНИЕ КОНФЛИКТА РЕСУРСОВ ANDROID ⚠️
+ * * Система сборки Android (Gradle) генерирует идентификаторы ресурсов на основе имен файлов БЕЗ расширений.
+ * Если мы сгенерируем "game_go_v2.mp3" и "game_go_v2.json", Android увидит их обоих
+ * как идентификатор ресурса `R.raw.game_go_v2`, что вызовет ошибку сборки "Дублирующиеся ресурсы".
+ * * Чтобы исправить это, переименуйте сгенерированный файл JSON в:
+ * `${outputFileName}_data.json`
+ * * Результат:
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
 
 ### Зацикленные звуки
 
@@ -689,7 +1079,11 @@ export default function App() {
   const playSound = (soundName: string) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName);
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
       console.log(`Воспроизведение звука: ${soundName}`);
     } else {
       console.warn('Проигрыватель еще не загружен.');
@@ -819,6 +1213,18 @@ audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg
 ```
 
 यह कमांड `src/__tests__/sounds/` डायरेक्टरी में `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a`, और `mygameaudio.ac3` उत्पन्न करेगा।
+
+/**
+ * ⚠️ Android संसाधन संघर्ष सुधार ⚠️
+ * * Android की बिल्ड सिस्टम (Gradle) फ़ाइल नामों के आधार पर संसाधन ID उत्पन्न करती है बिना एक्सटेंशन के।
+ * यदि हम "game_go_v2.mp3" और "game_go_v2.json" उत्पन्न करते हैं, तो Android उन दोनों को
+ * `R.raw.game_go_v2` संसाधन ID के रूप में देखता है, जिससे "डुप्लिकेट संसाधन" बिल्ड त्रुटि होती है।
+ * * इसे ठीक करने के लिए, उत्पन्न JSON फ़ाइल का नाम बदलकर यह करें:
+ * `${outputFileName}_data.json`
+ * * परिणाम:
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
 
 ### लूपिंग ध्वनियाँ
 
@@ -952,7 +1358,11 @@ export default function App() {
   const playSound = (soundName: string) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName);
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
       console.log(`ध्वनि बज रही है: ${soundName}`);
     } else {
       console.warn('खिलाड़ी अभी तक लोड नहीं हुआ है।');
@@ -1082,6 +1492,18 @@ audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg
 ```
 
 此命令将在 `src/__tests__/sounds/` 目录中生成 `mygameaudio.json`、`mygameaudio.mp3`、`mygameaudio.ogg`、`mygameaudio.m4a` 和 `mygameaudio.ac3`。
+
+/**
+ * ⚠️ ANDROID 资源冲突修复 ⚠️
+ * * Android 的构建系统 (Gradle) 基于不带扩展名的文件名生成资源 ID。
+ * 如果我们生成 "game_go_v2.mp3" 和 "game_go_v2.json"，Android 会将它们都视为
+ * 资源 ID `R.raw.game_go_v2`，从而导致“重复资源”构建错误。
+ * * 要修复此问题，请将生成的 JSON 文件重命名为：
+ * `${outputFileName}_data.json`
+ * * 结果：
+ * - game_go_v2.mp3      -> R.raw.game_go_v2
+ * - game_go_v2_data.json -> R.raw.game_go_v2_data
+ */
 
 ### 循环声音
 
@@ -1215,7 +1637,11 @@ export default function App() {
   const playSound = (soundName: string) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName);
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
       console.log(`正在播放声音: ${soundName}`);
     } else {
       console.warn('播放器尚未加载。');

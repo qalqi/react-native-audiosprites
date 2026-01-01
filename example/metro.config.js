@@ -1,10 +1,11 @@
 const path = require('path');
 const { getDefaultConfig } = require('@expo/metro-config');
-const { withMetroConfig } = require('react-native-monorepo-config');
 const {
   wrapWithAudioAPIMetroConfig,
 } = require('react-native-audio-api/metro-config');
 const root = path.resolve(__dirname, '..');
+
+const { withMetroConfig } = require('./metro-monorepo-config');
 
 /**
  * Metro configuration
