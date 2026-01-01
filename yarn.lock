@@ -26,10 +26,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ark/schema@npm:0.56.0":
+  version: 0.56.0
+  resolution: "@ark/schema@npm:0.56.0"
+  dependencies:
+    "@ark/util": 0.56.0
+  checksum: 0a8eb8c22ad9583cb2139f7f42e70a5ae039910a7efd79b1d72de358d9a8b2526ad5f9f451c2448478029352b95eadad6c5d05560e7ced0ec1dec6f8fac9fcbc
+  languageName: node
+  linkType: hard
+
 "@ark/util@npm:0.53.0":
   version: 0.53.0
   resolution: "@ark/util@npm:0.53.0"
   checksum: 16d1a7393d310078083b333022dacfe2575cce8133b7348b566f20021605710aa93ffadc2d8c1a499f0e5ac533e610f204e77564db3bf82b1b5799f29988b27d
+  languageName: node
+  linkType: hard
+
+"@ark/util@npm:0.56.0":
+  version: 0.56.0
+  resolution: "@ark/util@npm:0.56.0"
+  checksum: 7b77a55532fda78bde0c8327bb338d1b3c7396662f645dd9be9d688735b95314643de2c053cae66804777273d416a1a00db726b88ea080b1e0d5f6115e1bc00f
   languageName: node
   linkType: hard
 
@@ -4173,6 +4189,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"arkregex@npm:0.0.5":
+  version: 0.0.5
+  resolution: "arkregex@npm:0.0.5"
+  dependencies:
+    "@ark/util": 0.56.0
+  checksum: 250fd9d68ab735ecaecdbad0930d14c3a0d5dd99c9758cdee36dfef45978323e71a554952e4e0e7d5749329916aa48c063c9127e65c2b3e2e69fd969d1981b14
+  languageName: node
+  linkType: hard
+
 "arktype@npm:^2.1.15":
   version: 2.1.25
   resolution: "arktype@npm:2.1.25"
@@ -4181,6 +4206,17 @@ __metadata:
     "@ark/util": 0.53.0
     arkregex: 0.0.2
   checksum: f06ee4792cfb7eb991b523e4e88d4fbfb4329b36311cc761337dab46c59392dececd8584905327290cd6926ec748313b8479ccadd435fa5b70966e316b4e6c05
+  languageName: node
+  linkType: hard
+
+"arktype@npm:^2.1.29":
+  version: 2.1.29
+  resolution: "arktype@npm:2.1.29"
+  dependencies:
+    "@ark/schema": 0.56.0
+    "@ark/util": 0.56.0
+    arkregex: 0.0.5
+  checksum: e501ec93fa6045950d896fe3696f3188feaa611b45ef59839837d710eb38aef0f6c448f376d56bfd9b0e78a6149d5bab1714a4ee13b20d646e497b3be611262f
   languageName: node
   linkType: hard
 
@@ -11021,6 +11057,7 @@ __metadata:
     "@release-it/conventional-changelog": ^10.0.1
     "@types/jest": ^29.5.14
     "@types/react": ^19.1.12
+    arktype: ^2.1.29
     commitlint: ^19.8.1
     del-cli: ^6.0.0
     eslint: ^9.35.0
