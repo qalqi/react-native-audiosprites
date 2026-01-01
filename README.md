@@ -762,7 +762,11 @@ export default function App() {
   const playSound = (soundName: string) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName);
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
       console.log(`Reproduciendo sonido: ${soundName}`);
     } else {
       console.warn('El reproductor aún no se ha cargado.');
@@ -1025,7 +1029,11 @@ export default function App() {
   const playSound = (soundName: string) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName);
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
       console.log(`Воспроизведение звука: ${soundName}`);
     } else {
       console.warn('Проигрыватель еще не загружен.');
@@ -1288,7 +1296,11 @@ export default function App() {
   const playSound = (soundName: string) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName);
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
       console.log(`ध्वनि बज रही है: ${soundName}`);
     } else {
       console.warn('खिलाड़ी अभी तक लोड नहीं हुआ है।');
@@ -1551,7 +1563,11 @@ export default function App() {
   const playSound = (soundName: string) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName);
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
       console.log(`正在播放声音: ${soundName}`);
     } else {
       console.warn('播放器尚未加载。');
