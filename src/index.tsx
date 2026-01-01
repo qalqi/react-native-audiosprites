@@ -3,6 +3,32 @@
  * Requires an AudioContext and fetch to be injected.
  * Uses AudioBufferQueueSourceNode and buffer splitting for mobile stability.
  */
+
+/**
+ * Defines the available audio routing channels.
+ * - 'sfx': Short sound effects (coins, jumps, UI). High priority, usually usually non-looping.
+ * - 'music': Background tracks. Lower priority, usually looping, separate volume control.
+ */
+export type AudioChannel = 'sfx' | 'music';
+
+/**
+ * Configuration options for playing a specific sound sprite.
+ */
+export interface PlayOptions {
+  /**
+   * Specifies which mixer channel to route the audio through.
+   * Use 'music' for BGM to ensure it responds to music volume settings.
+   * @default 'sfx'
+   */
+  channel?: AudioChannel;
+
+  /**
+   * Force the sound to loop (or not), overriding the setting
+   * defined in the original audiosprite JSON manifest.
+   */
+  loop?: boolean;
+}
+
 export class AudioSpritePlayer {
   audioContext: any | null;
   fetch: any | null;
@@ -14,6 +40,11 @@ export class AudioSpritePlayer {
   private loopingSource: any | null = null;
   private sourcePool: any[] = []; // NEW: Pool for non-looping sources
   private maxPoolSize: number = 5; // Adjust this based on testing (5 is a good start)
+
+  // NEW: The Mixer
+  public masterGain: any;
+  public sfxGain: any;
+  public musicGain: any;
 
   constructor({
     audioContext,
@@ -55,6 +86,20 @@ export class AudioSpritePlayer {
       // @ts-ignore
       this.audioContext = new AudioContext();
     }
+
+    // 1. Create Master Output
+    this.masterGain = this.audioContext.createGain();
+    this.masterGain.gain.value = 1.0;
+    this.masterGain.connect(this.audioContext.destination);
+
+    // 2. Create Channels
+    this.sfxGain = this.audioContext.createGain();
+    this.sfxGain.gain.value = 1.0;
+    this.sfxGain.connect(this.masterGain); // Connect to Master
+
+    this.musicGain = this.audioContext.createGain();
+    this.musicGain.gain.value = 1.0;
+    this.musicGain.connect(this.masterGain); // Connect to Master
   }
 
   /**
@@ -133,7 +178,7 @@ export class AudioSpritePlayer {
     if (this.platform === 'web') {
       // Web logic remains simple: always create a standard AudioBufferSourceNode
       const source = this.audioContext.createBufferSource();
-      source.connect(this.audioContext.destination);
+      // source.connect(this.audioContext.destination);
       return source;
     }
 
@@ -153,7 +198,7 @@ export class AudioSpritePlayer {
         return null;
       }
       source = this.audioContext.createBufferQueueSource();
-      source.connect(this.audioContext.destination);
+      // source.connect(this.audioContext.destination);
       // console.log('Created new source. Pool size:', this.sourcePool.length);
     } else {
       // If pool is full, we might have to block or fail.
@@ -258,7 +303,7 @@ export class AudioSpritePlayer {
     }
   }
 
-  play(soundName: string) {
+  play(soundName: string, options?: PlayOptions) {
     if (!this.audioBuffer || !this.manifest) {
       console.warn('Audio sprite not loaded. Call load() first.');
       return;
@@ -283,6 +328,15 @@ export class AudioSpritePlayer {
       return;
     }
 
+    // 1. Determine Channel (Default to 'sfx')
+    const channel = options?.channel || 'sfx';
+    const targetNode = channel === 'music' ? this.musicGain : this.sfxGain;
+
+    // 2. Determine Loop (Options override Manifest)
+    // defined in your existing code as: const sound = this.manifest.sprite[soundName];
+    // const manifestLoop = sound[2];
+    const loop = options?.loop !== undefined ? options.loop : sound[2];
+
     let source: any;
     const spriteBuffer = this.spriteBufferCache[soundName];
 
@@ -302,13 +356,12 @@ export class AudioSpritePlayer {
         return;
       }
 
-      const loop = sound[2];
-
       if (loop) {
         // Always use AudioBufferQueueSourceNode
         source = this.audioContext.createBufferQueueSource();
         source.enqueueBuffer(spriteBuffer);
-        source.connect(this.audioContext.destination);
+        // source.connect(this.audioContext.destination);
+        source.connect(targetNode);
 
         // Manual looping using onEnded
         const loopHandler = () => {
@@ -332,6 +385,10 @@ export class AudioSpritePlayer {
         source = this._getOrCreateSourceNode();
         if (!source) return; // Dropped sound because pool was full
 
+        // Reconnect to the correct channel (since pooled nodes might have been connected elsewhere)
+        source.disconnect();
+        source.connect(targetNode);
+
         // Must re-enqueue the buffer since the source was reused
         source.enqueueBuffer(spriteBuffer);
 
@@ -350,9 +407,10 @@ export class AudioSpritePlayer {
       }
 
       source.buffer = spriteBuffer;
-      source.connect(this.audioContext.destination);
+      // source.connect(this.audioContext.destination);
+      source.connect(targetNode);
 
-      const loop = sound[2]; // audiosprite stores loop as the third element in the array
+      // const loop = sound[2]; // audiosprite stores loop as the third element in the array
       if (loop) {
         source.loop = true;
         source.loopStart = 0; // Relative to the spriteBuffer
@@ -397,5 +455,53 @@ export class AudioSpritePlayer {
     } else {
       console.log('RNAS: No looping audio to stop.');
     }
+  }
+
+  /**
+   * Sets the volume for background music only.
+   * @param value 0.0 to 1.0
+   */
+  setMusicVolume(value: number) {
+    if (this.musicGain) {
+      // secure against uninitialized context
+      this.musicGain.gain.setTargetAtTime(
+        value,
+        this.audioContext.currentTime,
+        0.02
+      );
+    }
+  }
+
+  /**
+   * Sets the volume for sound effects only.
+   * @param value 0.0 to 1.0
+   */
+  setSFXVolume(value: number) {
+    if (this.sfxGain) {
+      this.sfxGain.gain.setTargetAtTime(
+        value,
+        this.audioContext.currentTime,
+        0.02
+      );
+    }
+  }
+
+  /**
+   * Sets the Global Master Volume (affects both Music and SFX).
+   * @param value 0.0 to 1.0
+   */
+  set volume(value: number) {
+    if (this.masterGain) {
+      this.masterGain.gain.setTargetAtTime(
+        value,
+        this.audioContext.currentTime,
+        0.02
+      );
+    }
+  }
+
+  // Master Volume getter
+  get volume(): number {
+    return this.masterGain?.gain?.value ?? 1.0;
   }
 }

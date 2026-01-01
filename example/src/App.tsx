@@ -112,11 +112,17 @@ export default function App() {
   };
 
   // 🚨 CHANGE 3: Use the ref to access the stable player instance
-  const playSound = (soundName: string) => {
+  const playSound = (
+    soundName: string,
+    options?: {
+      channel?: 'sfx' | 'music';
+      loop?: boolean;
+    }
+  ) => {
     const player = playerRef.current;
     if (player && isLoaded) {
       // The buffer should now be stable inside the ref-managed instance.
-      player.play(soundName);
+      player.play(soundName, options);
 
       console.log(`Playing sound: ${soundName}`);
     } else {
@@ -128,6 +134,27 @@ export default function App() {
     const player = playerRef.current;
     if (player) {
       player.stop();
+    }
+  };
+
+  const setMusicVolume = (val: number) => {
+    const player = playerRef.current;
+    if (player) {
+      player.setMusicVolume(val);
+    }
+  };
+
+  const setSFXVolume = (val: number) => {
+    const player = playerRef.current;
+    if (player) {
+      player.setSFXVolume(val);
+    }
+  };
+
+  const setMasterVolume = (val: number) => {
+    const player = playerRef.current;
+    if (player) {
+      player.volume = val;
     }
   };
 
@@ -175,7 +202,7 @@ export default function App() {
 
       <View style={styles.buttonsContainer}>
         <TouchableOpacity
-          onPress={() => playSound('bg_loop')}
+          onPress={() => playSound('bg_loop', { channel: 'music' })}
           style={isLoaded ? styles.button : styles.buttonDisabled}
           disabled={!isLoaded}
         >
@@ -187,6 +214,56 @@ export default function App() {
           disabled={!isLoaded}
         >
           <Text style={styles.buttonText}>Stop Background Music(BGM) Loop</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.sectionHeader}>Volume Controls</Text>
+      <View style={styles.volumeContainer}>
+        <TouchableOpacity
+          onPress={() => setMasterVolume(0)}
+          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
+          disabled={!isLoaded}
+        >
+          <Text style={styles.buttonText}>Mute All</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setMasterVolume(1)}
+          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
+          disabled={!isLoaded}
+        >
+          <Text style={styles.buttonText}>Unmute All</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.volumeContainer}>
+        <TouchableOpacity
+          onPress={() => setMusicVolume(0)}
+          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
+          disabled={!isLoaded}
+        >
+          <Text style={styles.buttonText}>Mute Music</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setMusicVolume(1)}
+          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
+          disabled={!isLoaded}
+        >
+          <Text style={styles.buttonText}>Unmute Music</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.volumeContainer}>
+        <TouchableOpacity
+          onPress={() => setSFXVolume(0)}
+          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
+          disabled={!isLoaded}
+        >
+          <Text style={styles.buttonText}>Mute SFX</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setSFXVolume(1)}
+          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
+          disabled={!isLoaded}
+        >
+          <Text style={styles.buttonText}>Unmute SFX</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -232,5 +309,25 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     textAlign: 'center',
     fontWeight: 'bold',
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  volumeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '80%',
+    marginBottom: 10,
+  },
+  volumeButton: {
+    backgroundColor: '#556b2f',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    flex: 1,
+    marginHorizontal: 5,
   },
 });

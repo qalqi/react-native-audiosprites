@@ -41,6 +41,36 @@ When you play a looping sound, it will play continuously until you stop it using
 
 Then, you can use the `AudioSpritePlayer` to play the sounds from the sprite.
 
+### Audio Routing and Volume Control (Mixer Graph)
+
+The library features a mixer graph that allows you to control the volume of Sound Effects (SFX) and Music separately, as well as a global Master volume.
+
+-   `sfx`: Short sound effects (coins, jumps, UI). High priority.
+-   `music`: Background tracks. Lower priority.
+
+You can specify the channel when playing a sound:
+
+```typescript
+// Play on 'sfx' channel (default)
+player.play('coin_sound');
+
+// Play on 'music' channel
+player.play('bg_music', { channel: 'music' });
+```
+
+You can control the volume dynamically:
+
+```typescript
+// Set Music Volume (0.0 to 1.0)
+player.setMusicVolume(0.5);
+
+// Set SFX Volume (0.0 to 1.0)
+player.setSFXVolume(0.8);
+
+// Set Master Volume (affects both)
+player.volume = 1.0;
+```
+
 ### Browser Environment
 
 ```typescript
@@ -159,7 +189,12 @@ export default function App() {
   const playSound = (soundName: string) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName);
+      // Play on music channel
+      if (soundName === 'bg_loop') {
+          player.play(soundName, { channel: 'music' });
+      } else {
+          player.play(soundName);
+      }
       console.log(`Playing sound: ${soundName}`);
     } else {
       console.warn('Player not loaded yet.');
@@ -262,6 +297,299 @@ Made with [create-react-native-library](https://github.com/callstack/react-nativ
 ---
 
 # Translations
+
+## Telugu
+
+![react-native-audiosprites_poster](react-native-audiosprites_poster.jpg)
+
+# react-native-audiosprites
+
+'audiosprite' టూల్ ద్వారా రూపొందించబడిన ఆడియో స్ప్రైట్‌ల కోసం ఒక యూనివర్సల్ ప్లేయర్.
+ఒకే సమయంలో అనేక శబ్దాలను ప్లే చేయడానికి మద్దతు ఇస్తుంది!
+
+## ఇన్‌స్టాలేషన్
+
+```sh
+npm install react-native-audiosprites
+```
+
+```sh
+yarn add react-native-audiosprites
+```
+
+## వినియోగం
+
+ముందుగా, మీరు `audiosprite` టూల్‌ను ఉపయోగించి ఆడియో స్ప్రైట్ మరియు JSON మానిఫెస్ట్ ఫైల్‌ను రూపొందించాలి.
+
+మీరు [`audiosprite`](https://www.npmjs.com/package/audiosprite)ని గ్లోబల్‌గా ఇన్‌స్టాల్ చేశారని అనుకుందాం:
+
+```sh
+audiosprite --output src/__tests__/sounds/mygameaudio --format howler --loop "bg_loop" src/__tests__/sounds/bg_loop.wav src/__tests__/sounds/Sound_1.m4a src/__tests__/sounds/Sound_2.m4a src/__tests__/sounds/Sound_3.m4a src/__tests__/sounds/Sound_4.m4a
+```
+
+ఈ కమాండ్ `src/__tests__/sounds/` డైరెక్టరీలో `mygameaudio.json`, `mygameaudio.mp3`, `mygameaudio.ogg`, `mygameaudio.m4a`, మరియు `mygameaudio.ac3` ఫైళ్లను సృష్టిస్తుంది.
+
+### లూపింగ్ సౌండ్స్ (Looping Sounds)
+
+మీరు `audiosprite` కమాండ్‌తో `--loop` ఎంపికను ఉపయోగించి లూపింగ్ శబ్దాలను సృష్టించవచ్చు. `--loop` ఎంపిక యొక్క విలువ మీరు లూప్ చేయాలనుకుంటున్న శబ్దం పేరు అయి ఉండాలి.
+
+ఉదాహరణకు, `bg_music` శబ్దాన్ని లూప్ చేయడానికి, మీరు ఈ కింది కమాండ్‌ను ఉపయోగిస్తారు:
+
+```sh
+audiosprite --output audiosprite --format howler --loop "bg_music" --path ./src/__tests__/ Sound_1.m4a Sound_2.m4a Sound_3.m4a Sound_4.m4a bg_music.wav
+```
+
+మీరు లూపింగ్ శబ్దాన్ని ప్లే చేసినప్పుడు, మీరు `player.stop()` పద్ధతిని ఉపయోగించి దాన్ని ఆపే వరకు అది నిరంతరాయంగా ప్లే అవుతూనే ఉంటుంది. వెబ్ మరియు మొబైల్ ప్లాట్‌ఫారమ్‌లలో లూపింగ్ ఫంక్షనాలిటీకి మద్దతు ఉంది.
+
+తరువాత, మీరు స్ప్రైట్ నుండి శబ్దాలను ప్లే చేయడానికి `AudioSpritePlayer`ని ఉపయోగించవచ్చు.
+
+### ఆడియో రూటింగ్ మరియు వాల్యూమ్ నియంత్రణ (మిక్సర్ గ్రాఫ్)
+
+ఈ లైబ్రరీ మిక్సర్ గ్రాఫ్ ఫీచర్‌ను కలిగి ఉంది, ఇది సౌండ్ ఎఫెక్ట్స్ (SFX) మరియు మ్యూజిక్ వాల్యూమ్‌లను విడివిడిగా, అలాగే గ్లోబల్ మాస్టర్ వాల్యూమ్‌ను నియంత్రించడానికి మిమ్మల్ని అనుమతిస్తుంది.
+
+-   `sfx`: చిన్న సౌండ్ ఎఫెక్ట్స్ (కాయిన్స్, జంప్స్, UI). అధిక ప్రాధాన్యత.
+-   `music`: నేపథ్య ట్రాక్‌లు (Background tracks). తక్కువ ప్రాధాన్యత.
+
+శబ్దాన్ని ప్లే చేస్తున్నప్పుడు మీరు ఛానెల్‌ని పేర్కొనవచ్చు:
+
+```typescript
+// 'sfx' ఛానెల్‌లో ప్లే చేయండి (డిఫాల్ట్)
+player.play('coin_sound');
+
+// 'music' ఛానెల్‌లో ప్లే చేయండి
+player.play('bg_music', { channel: 'music' });
+```
+
+మీరు వాల్యూమ్‌ను డైనమిక్‌గా నియంత్రించవచ్చు:
+
+```typescript
+// మ్యూజిక్ వాల్యూమ్‌ను సెట్ చేయండి (0.0 నుండి 1.0)
+player.setMusicVolume(0.5);
+
+// SFX వాల్యూమ్‌ను సెట్ చేయండి (0.0 నుండి 1.0)
+player.setSFXVolume(0.8);
+
+// మాస్టర్ వాల్యూమ్‌ను సెట్ చేయండి (రెండింటినీ ప్రభావితం చేస్తుంది)
+player.volume = 1.0;
+```
+
+### బ్రౌజర్ ఎన్విరాన్మెంట్ (Browser Environment)
+
+```typescript
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+
+const player = new AudioSpritePlayer({
+  platform: 'web',
+});
+
+async function playSound(soundName: string) {
+  try {
+    // ఆడియో స్ప్రైట్ మానిఫెస్ట్ మరియు ఆడియో ఫైళ్లను లోడ్ చేయండి
+    // మీ audiosprite.json ఫైల్ పాత్‌ను సరిచూసుకోండి
+    await player.load('./src/__tests__/sounds/mygameaudio.json');
+    console.log('ఆడియో స్ప్రైట్ విజయవంతంగా లోడ్ అయింది.');
+
+    // స్ప్రైట్‌మ్యాప్ నుండి శబ్దాన్ని ప్లే చేయండి
+    player.play(soundName);
+    console.log(`శబ్దాన్ని ప్లే చేస్తోంది: ${soundName}`);
+  } catch (error) {
+    console.error('శబ్దాన్ని ప్లే చేయడంలో లోపం:', error);
+  }
+}
+
+function stopSound() {
+  player.stop();
+  console.log('లూపింగ్ శబ్దం ఆగిపోయింది.');
+}
+
+// వినియోగ ఉదాహరణ:
+playSound('Sound_1');
+// playSound('Sound_2');
+// లూపింగ్ శబ్దాన్ని ఆపడానికి:
+// stopSound();
+```
+
+### రియాక్ట్ నేటివ్ ఎన్విరాన్మెంట్ (React Native Environment)
+
+రియాక్ట్ నేటివ్ కోసం, ఆడియో ప్లేబ్యాక్ మరియు అసెట్ లోడింగ్‌ను నిర్వహించడానికి మీకు `react-native-audio-api` మరియు `expo-asset` అవసరం.
+
+ముందుగా, డిపెండెన్సీలను ఇన్‌స్టాల్ చేయండి:
+
+```sh
+npm install react-native-audio-api expo-asset expo-file-system
+# లేదా
+yarn add react-native-audio-api expo-asset expo-file-system
+```
+
+`react-native-audio-api` డాక్యుమెంటేషన్ ప్రకారం `metro.config.js`ని మార్చండి: https://docs.swmansion.com/react-native-audio-api/docs/fundamentals/getting-started
+
+```js
+module.exports = wrapWithAudioAPIMetroConfig(config);
+```
+
+తరువాత, మీరు దీన్ని మీ కాంపోనెంట్‌లో ఉపయోగించవచ్చు:
+
+```typescript
+import { StyleSheet, View, Text, Platform, TouchableOpacity } from 'react-native';
+import { AudioSpritePlayer } from 'react-native-audiosprites';
+import { AudioManager, AudioContext } from 'react-native-audio-api';
+import { useEffect, useState, useRef } from 'react';
+import { Asset } from 'expo-asset';
+import { fetch } from 'expo/fetch';
+import manifest from '../assets/mygameaudio.json';
+
+// ఆడియో అసెట్‌ను ఇంపోర్ట్ చేయండి
+const audioAsset = require('../assets/mygameaudio.mp3');
+
+export default function App() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const playerRef = useRef<AudioSpritePlayer | null>(null);
+
+  useEffect(() => {
+    const loadPlayer = async () => {
+      const asset = Asset.fromModule(audioAsset);
+      await asset.downloadAsync();
+      const audioUri = asset.localUri || asset.uri;
+
+      if (!audioUri) {
+        console.error('ఆడియో URIని పొందడంలో విఫలమైంది.');
+        return;
+      }
+
+      if (Platform.OS === 'ios') {
+        try {
+          await AudioManager.setAudioSessionOptions({
+            iosCategory: 'playback',
+            iosOptions: ['mixWithOthers'],
+          });
+          await AudioManager.setAudioSessionActivity(true);
+        } catch (e) {
+          console.error('AudioSession ఎంపికలను కాన్ఫిగర్ చేయడంలో విఫలమైంది:', e);
+        }
+      }
+
+      const audioContext = new AudioContext();
+      const audioPlayer = new AudioSpritePlayer({
+        audioContext,
+        fetch: fetch.bind(globalThis),
+        platform: Platform.OS,
+      });
+
+      try {
+        await audioPlayer.load(manifest, audioUri);
+        playerRef.current = audioPlayer;
+        setIsLoaded(true);
+        console.log('ఆడియో స్ప్రైట్ విజయవంతంగా లోడ్ అయింది.');
+      } catch (error) {
+        console.error('ఆడియో స్ప్రైట్‌ను లోడ్ చేయడంలో విఫలమైంది:', error);
+      }
+    };
+
+    loadPlayer();
+  }, []);
+
+  const playSound = (soundName: string) => {
+    const player = playerRef.current;
+    if (player && isLoaded) {
+      player.play(soundName);
+      console.log(`శబ్దాన్ని ప్లే చేస్తోంది: ${soundName}`);
+    } else {
+      console.warn('ప్లేయర్ ఇంకా లోడ్ కాలేదు.');
+    }
+  };
+
+  const stopBGM = () => {
+    const player = playerRef.current;
+    if (player) {
+      player.stop();
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text>AudioSprite Player ఉదాహరణ</Text>
+      <TouchableOpacity
+        onPress={() => loadPlayer()}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>ప్లేయర్‌ని లోడ్ చేయండి</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_1')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Sound 1 ప్లే చేయండి</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('Sound_2')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>Sound 2 ప్లే చేయండి</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => playSound('bg_loop')}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>బ్యాక్‌గ్రౌండ్ లూప్‌ను ప్లే చేయండి</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={stopBGM}
+        style={styles.button}
+        disabled={!isLoaded}
+      >
+        <Text style={styles.buttonText}>BGM ఆపు</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  button: {
+    backgroundColor: '#DDDDDD',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#000000',
+    textAlign: 'center',
+  },
+});
+```
+
+## స్ఫూర్తి (Inspiration)
+
+https://github.com/goldfire/howler.js
+జనరేట్ చేయబడిన json new Howl({
+sprite: {
+key1: [offset, duration, (loop)]
+},
+}); తో కూడా పనిచేస్తుంది.
+
+## సహకారం (Contributing)
+
+- [డెవలప్‌మెంట్ వర్క్‌ఫ్లో](CONTRIBUTING.md#development-workflow)
+- [పుల్ రిక్వెస్ట్ పంపడం](CONTRIBUTING.md#sending-a-pull-request)
+- [ప్రవర్తనా నియమావళి](CODE_OF_CONDUCT.md)
+
+## లైసెన్స్ (License)
+
+MIT
+
+## క్రెడిట్స్ (Credits)
+
+[Shaker, Woda, Conga, Bongo, Templeblock.wav](https://freesound.org/people/kwazi/sounds/34115/) by [kwazi](https://freesound.org/people/kwazi/) | లైసెన్స్: [అట్రిబ్యూషన్ 3.0](http://creativecommons.org/licenses/by/3.0/)
+
+[create-react-native-library](https://github.com/callstack/react-native-builder-bob)తో తయారు చేయబడింది
 
 ## Spanish
 
