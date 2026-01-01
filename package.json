@@ -36,6 +36,8 @@
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli lib",
+    "types:sync": "node scripts/generate-audio-types.mjs",
+    "prebuild": "npm run types:sync",
     "prepare": "bob build",
     "release:alpha": "release-it --preRelease=alpha",
     "release": "release-it --only-version",
@@ -98,6 +100,7 @@
     "react-native-audio-api": "^0.9.3",
     "react-native-builder-bob": "^0.40.13",
     "release-it": "^19.0.4",
+    "ts-morph": "^27.0.2",
     "typescript": "^5.9.2"
   },
   "peerDependencies": {

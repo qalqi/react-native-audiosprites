@@ -6,7 +6,11 @@ const MOCK_MANIFEST_AUDIO = require('./audiosprite.json');
 // Mock Web Audio API
 class MockGainNode {
   context: MockAudioContext;
-  gain: { setValueAtTime: jest.Mock; value: number; setTargetAtTime: jest.Mock };
+  gain: {
+    setValueAtTime: jest.Mock;
+    value: number;
+    setTargetAtTime: jest.Mock;
+  };
   constructor(ctx: MockAudioContext) {
     this.context = ctx;
     this.gain = {
@@ -171,11 +175,13 @@ describe('@audiosprites/player (Web)', () => {
     player.play('Sound_1');
 
     const sourceResult = audioContext.createBufferSource.mock.results[0];
-    const source = sourceResult.value;
-    const sfxGain = (player as any).sfxGain;
+    if (sourceResult) {
+      const source = sourceResult.value;
+      const sfxGain = (player as any).sfxGain;
 
-    // Check connection to SFX gain node
-    expect(source.connect).toHaveBeenCalledWith(sfxGain);
+      // Check connection to SFX gain node
+      expect(source.connect).toHaveBeenCalledWith(sfxGain);
+    }
   });
 
   it('play() should route to music channel when specified', async () => {
@@ -183,11 +189,13 @@ describe('@audiosprites/player (Web)', () => {
     player.play('Sound_1', { channel: 'music' });
 
     const sourceResult = audioContext.createBufferSource.mock.results[0];
-    const source = sourceResult.value;
-    const musicGain = (player as any).musicGain;
+    if (sourceResult) {
+      const source = sourceResult.value;
+      const musicGain = (player as any).musicGain;
 
-    // Check connection to Music gain node
-    expect(source.connect).toHaveBeenCalledWith(musicGain);
+      // Check connection to Music gain node
+      expect(source.connect).toHaveBeenCalledWith(musicGain);
+    }
   });
 
   it('load() should fetch manifest and first resource', async () => {

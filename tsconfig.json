@@ -25,8 +25,9 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ESNext",
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "typeRoots": ["./node_modules/@types", "./types"]
   },
-  "include": ["src", "__tests__"],
+  "include": ["src", "__tests__", "types/**/*.d.ts"],
   "exclude": ["lib"]
 }
