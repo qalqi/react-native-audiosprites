@@ -41,6 +41,10 @@ When you play a looping sound, it will play continuously until you stop it using
 
 Then, you can use the `AudioSpritePlayer` to play the sounds from the sprite.
 
+### Type Safety for Native Audio Extensions
+
+This library includes robust type definitions for `react-native-audio-api` extensions, such as `createBufferQueueSource`. These types are automatically generated and synchronized with the native audio library version `0.10.1`.
+
 ### Audio Routing and Volume Control (Mixer Graph)
 
 The library features a mixer graph that allows you to control the volume of Sound Effects (SFX) and Music separately, as well as a global Master volume.

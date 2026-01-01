@@ -7,6 +7,8 @@ interface BaseAudioContext {
   readonly state: ContextState;
   readonly sampleRate: number;
   readonly currentTime: number;
+  readonly decoder: IAudioDecoder;
+  readonly stretcher: IAudioStretcher;
 
   createRecorderAdapter(): IRecorderAdapterNode;
   createWorkletSourceNode(
@@ -43,12 +45,10 @@ interface BaseAudioContext {
     disableNormalization: boolean
   ) => IPeriodicWave;
   createAnalyser: () => IAnalyserNode;
-  decodeAudioDataSource: (sourcePath: string) => Promise<IAudioBuffer>;
-  decodeAudioData: (arrayBuffer: ArrayBuffer) => Promise<IAudioBuffer>;
-  decodePCMAudioDataInBase64: (
-    b64: string,
-    playbackRate: number
-  ) => Promise<IAudioBuffer>;
+  createConvolver: (
+    buffer: IAudioBuffer | undefined,
+    disableNormalization: boolean
+  ) => IConvolverNode;
   createStreamer: () => IStreamerNode;
 }
 

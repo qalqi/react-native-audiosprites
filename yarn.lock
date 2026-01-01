@@ -11171,6 +11171,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-native-audio-api@npm:0.10.1":
+  version: 0.10.1
+  resolution: "react-native-audio-api@npm:0.10.1"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+    react-native-worklets: ">= 0.6.0"
+  peerDependenciesMeta:
+    react-native-worklets:
+      optional: true
+  bin:
+    setup-rn-audio-api-web: scripts/setup-rn-audio-api-web.js
+  checksum: 0c1f072b7188844ad1dd3c648d0100d4967ce7061a866dc67b3b6d58d566f1771a60186b81fb5433fc9fc79eb92ef2c11777f7fb98dd871621dbf6a26d54b74b
+  languageName: node
+  linkType: hard
+
 "react-native-audio-api@npm:^0.10.0":
   version: 0.10.0
   resolution: "react-native-audio-api@npm:0.10.0"
@@ -11181,19 +11197,6 @@ __metadata:
   bin:
     setup-rn-audio-api-web: scripts/setup-rn-audio-api-web.js
   checksum: 3d2cf70816e38a056868d3936ba7a3683ff7cbcab8fee9362080dc6a9f4f2b3bcbe282d222146b4af85499c22ee124b632b37bb147ac33165eb3ad4b789c99a4
-  languageName: node
-  linkType: hard
-
-"react-native-audio-api@npm:^0.9.3":
-  version: 0.9.3
-  resolution: "react-native-audio-api@npm:0.9.3"
-  peerDependencies:
-    react: "*"
-    react-native: "*"
-    react-native-worklets: ~0.6.0
-  bin:
-    setup-rn-audio-api-web: scripts/setup-rn-audio-api-web.js
-  checksum: 66d8ea2184824f5d2ce2addc77c3d01308e2bfe4342c96606bd0d0735cc5b9990f24c3fc9ea1ea604397cf9d7103a84c53d8ed29cbf4cabd7f8f9800b6e01aa2
   languageName: node
   linkType: hard
 
@@ -11239,7 +11242,7 @@ __metadata:
     prettier: ^3.6.2
     react: 19.1.0
     react-native: 0.81.5
-    react-native-audio-api: ^0.9.3
+    react-native-audio-api: 0.10.1
     react-native-builder-bob: ^0.40.13
     release-it: ^19.0.4
     ts-morph: ^27.0.2
