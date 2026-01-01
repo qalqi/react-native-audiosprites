@@ -12,6 +12,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Asset } from 'expo-asset';
 import { fetch } from 'expo/fetch';
 import manifest from '../assets/mygameaudio.json';
+import Slider from '@react-native-community/slider';
 
 // Import the audio asset using require, which gives an Asset object/reference
 const audioAsset = require('../assets/mygameaudio.mp3');
@@ -218,6 +219,49 @@ export default function App() {
       </View>
 
       <Text style={styles.sectionHeader}>Volume Controls</Text>
+
+      {/* Master Volume */}
+      <View style={styles.sliderContainer}>
+        <Text style={styles.sliderLabel}>Master Volume</Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={1}
+          step={0.05}
+          value={1}
+          onValueChange={setMasterVolume}
+          disabled={!isLoaded}
+        />
+      </View>
+
+      {/* Music Volume */}
+      <View style={styles.sliderContainer}>
+        <Text style={styles.sliderLabel}>Music Volume</Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={1}
+          step={0.05}
+          value={1}
+          onValueChange={setMusicVolume}
+          disabled={!isLoaded}
+        />
+      </View>
+
+      {/* SFX Volume */}
+      <View style={styles.sliderContainer}>
+        <Text style={styles.sliderLabel}>SFX Volume</Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={1}
+          step={0.05}
+          value={1}
+          onValueChange={setSFXVolume}
+          disabled={!isLoaded}
+        />
+      </View>
+
       <View style={styles.volumeContainer}>
         <TouchableOpacity
           onPress={() => setMasterVolume(0)}
@@ -232,38 +276,6 @@ export default function App() {
           disabled={!isLoaded}
         >
           <Text style={styles.buttonText}>Unmute All</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.volumeContainer}>
-        <TouchableOpacity
-          onPress={() => setMusicVolume(0)}
-          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
-          disabled={!isLoaded}
-        >
-          <Text style={styles.buttonText}>Mute Music</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setMusicVolume(1)}
-          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
-          disabled={!isLoaded}
-        >
-          <Text style={styles.buttonText}>Unmute Music</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.volumeContainer}>
-        <TouchableOpacity
-          onPress={() => setSFXVolume(0)}
-          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
-          disabled={!isLoaded}
-        >
-          <Text style={styles.buttonText}>Mute SFX</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setSFXVolume(1)}
-          style={isLoaded ? styles.volumeButton : styles.buttonDisabled}
-          disabled={!isLoaded}
-        >
-          <Text style={styles.buttonText}>Unmute SFX</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -329,5 +341,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     flex: 1,
     marginHorizontal: 5,
+  },
+  sliderContainer: {
+    width: '80%',
+    marginVertical: 10,
+  },
+  sliderLabel: {
+    fontSize: 16,
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  slider: {
+    width: '100%',
+    height: 40,
   },
 });

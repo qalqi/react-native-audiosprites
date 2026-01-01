@@ -3197,6 +3197,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native-community/slider@npm:^5.1.1":
+  version: 5.1.1
+  resolution: "@react-native-community/slider@npm:5.1.1"
+  checksum: 63ab94d8ac22a0e4d7b86f0800283154604e93008dd04103e01a6aa5c56712d74f9b829665cd012ebc4fe29fa31f5a0d7e110bdeaa11bc9b347090f348428021
+  languageName: node
+  linkType: hard
+
 "@react-native/assets-registry@npm:0.81.5":
   version: 0.81.5
   resolution: "@react-native/assets-registry@npm:0.81.5"
@@ -10983,6 +10990,7 @@ __metadata:
   resolution: "react-native-audiosprites-example@workspace:example"
   dependencies:
     "@expo/metro-runtime": ~6.1.2
+    "@react-native-community/slider": ^5.1.1
     expo: ~54.0.30
     expo-asset: ~12.0.12
     expo-audio: ~1.1.1
@@ -11007,6 +11015,7 @@ __metadata:
     "@eslint/eslintrc": ^3.3.1
     "@eslint/js": ^9.35.0
     "@evilmartians/lefthook": ^1.12.3
+    "@react-native-community/slider": ^5.1.1
     "@react-native/babel-preset": 0.81.1
     "@react-native/eslint-config": ^0.81.1
     "@release-it/conventional-changelog": ^10.0.1
