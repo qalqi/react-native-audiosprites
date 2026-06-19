@@ -10,6 +10,7 @@ class MockGainNode {
     setValueAtTime: jest.Mock;
     value: number;
     setTargetAtTime: jest.Mock;
+    linearRampToValueAtTime: jest.Mock;
   };
   constructor(ctx: MockAudioContext) {
     this.context = ctx;
@@ -17,6 +18,7 @@ class MockGainNode {
       setValueAtTime: jest.fn(),
       value: 1,
       setTargetAtTime: jest.fn(),
+      linearRampToValueAtTime: jest.fn(),
     };
   }
   connect = jest.fn();
@@ -28,6 +30,7 @@ class MockBufferSourceNode {
   loopStart = 0;
   loopEnd = 0;
   stop = jest.fn();
+  playbackRate = { value: 1 };
   constructor(ctx: MockAudioContext) {
     this.context = ctx;
     this.buffer = null;
@@ -65,11 +68,16 @@ class MockAudioContext {
   resume = jest.fn().mockResolvedValue(undefined);
   destination = 'mock-destination';
   createBufferQueueSource = jest.fn(() => new MockBufferQueueSourceNode(this));
+  createStereoPanner = jest.fn(() => ({
+    pan: { value: 0 },
+    connect: jest.fn(),
+  }));
 }
 
 class MockBufferQueueSourceNode {
   context: MockAudioContext;
   onEnded: (() => void) | null = null;
+  playbackRate = { value: 1 };
   constructor(ctx: MockAudioContext) {
     this.context = ctx;
   }
@@ -77,6 +85,7 @@ class MockBufferQueueSourceNode {
   connect = jest.fn();
   start = jest.fn();
   stop = jest.fn();
+  disconnect = jest.fn();
 }
 
 // Mock fetch
@@ -318,6 +327,57 @@ describe('@audiosprites/player (Web)', () => {
       expect(mockSource.stop).toHaveBeenCalledTimes(1);
     }
   });
+
+  it('play() should support pitch, panning, and throttling options', async () => {
+    await player.load('http://localhost/sprite.json');
+
+    // 1. Test pitch
+    player.play('Sound_1', { pitch: 1.5 });
+    const source1 = audioContext.createBufferSource.mock.results[0]!.value;
+    expect(source1.playbackRate.value).toBe(1.5);
+
+    // 2. Test panning
+    player.play('Sound_1', { pan: -0.7 });
+    expect(audioContext.createStereoPanner).toHaveBeenCalledTimes(1);
+    const pannerMock = audioContext.createStereoPanner.mock.results[0]!.value;
+    expect(pannerMock.pan.value).toBe(-0.7);
+
+    // 3. Test throttling
+    const now = Date.now();
+    jest.spyOn(Date, 'now').mockReturnValue(now);
+
+    player.play('Sound_1', { throttleMs: 100 }); // Play at time T
+    player.play('Sound_1', { throttleMs: 100 }); // Play immediately again (should be throttled)
+
+    // We had 2 plays from previous tests, plus the first throttled play. Total = 3.
+    // The second throttled play should not create a new source.
+    expect(audioContext.createBufferSource).toHaveBeenCalledTimes(3);
+
+    // Advance time by 150ms and play again
+    jest.spyOn(Date, 'now').mockReturnValue(now + 150);
+    player.play('Sound_1', { throttleMs: 100 });
+    expect(audioContext.createBufferSource).toHaveBeenCalledTimes(4);
+
+    jest.restoreAllMocks();
+  });
+
+  it('fadeInMusic() and fadeOutMusic() should perform volume ramp transitions', async () => {
+    jest.useFakeTimers();
+    await player.load('http://localhost/sprite.json');
+
+    player.fadeInMusic('bg_loop', 1000);
+    const musicGain = (player as any).musicGain;
+    expect(musicGain.gain.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(musicGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(1.0, expect.any(Number));
+
+    player.fadeOutMusic(1000);
+    expect(musicGain.gain.setValueAtTime).toHaveBeenCalledWith(1.0, expect.any(Number));
+    expect(musicGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+
+    // Fast-forward to let the fade out setTimeout complete
+    jest.advanceTimersByTime(1000);
+    jest.useRealTimers();
+  });
 });
 
 describe('@audiosprites/player (Mobile)', () => {
@@ -368,7 +428,7 @@ describe('@audiosprites/player (Mobile)', () => {
     if (mockSourceResult) {
       const mockSource = mockSourceResult.value;
       expect(mockSource.enqueueBuffer).toHaveBeenCalledTimes(1);
-      expect(mockSource.start).toHaveBeenCalledWith(0);
+      expect(mockSource.start).toHaveBeenCalledWith(0, 0);
       expect(mockSource.onEnded).toBeInstanceOf(Function);
 
       // Simulate the onEnded callback being called

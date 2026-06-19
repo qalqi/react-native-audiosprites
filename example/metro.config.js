@@ -1,23 +1,19 @@
+const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
-const { getDefaultConfig } = require('@expo/metro-config');
-const {
-  wrapWithAudioAPIMetroConfig,
-} = require('react-native-audio-api/metro-config');
-const root = path.resolve(__dirname, '..');
 
-const { withMetroConfig } = require('./metro-monorepo-config');
+// 1. Get the baseline config straight from Expo
+const projectRoot = __dirname;
+const workspaceRoot = path.resolve(projectRoot, '..');
 
-/**
- * Metro configuration
- * https://facebook.github.io/metro/docs/configuration
- *
- * @type {import('metro-config').MetroConfig}
- */
-const config = withMetroConfig(getDefaultConfig(__dirname), {
-  root,
-  dirname: __dirname,
-});
+const config = getDefaultConfig(projectRoot);
 
-config.resolver.unstable_enablePackageExports = true;
+// 2. Add monorepo tracking directories
+config.watchFolders = [workspaceRoot];
 
-module.exports = wrapWithAudioAPIMetroConfig(config);
+// 3. Force Metro to resolve node_modules up and down the monorepo tree safely
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'),
+  path.resolve(workspaceRoot, 'node_modules'),
+];
+
+module.exports = config;

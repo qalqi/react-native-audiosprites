@@ -27,6 +27,24 @@ export interface PlayOptions {
    * defined in the original audiosprite JSON manifest.
    */
   loop?: boolean;
+
+  /**
+   * Playback speed/pitch multiplier.
+   * 1.0 is normal speed. Values > 1.0 are faster/higher pitch; values < 1.0 are slower/lower pitch.
+   * @default 1.0
+   */
+  pitch?: number;
+
+  /**
+   * Stereo panning value between -1.0 (full left) and 1.0 (full right).
+   * @default 0.0 (center)
+   */
+  pan?: number;
+
+  /**
+   * Cooldown duration in milliseconds to prevent the sound from triggering too fast.
+   */
+  throttleMs?: number;
 }
 
 export class AudioSpritePlayer {
@@ -40,6 +58,7 @@ export class AudioSpritePlayer {
   private loopingSource: any | null = null;
   private sourcePool: any[] = []; // NEW: Pool for non-looping sources
   private maxPoolSize: number = 5; // Adjust this based on testing (5 is a good start)
+  private lastPlayedTimestamps: Record<string, number> = {};
 
   // NEW: The Mixer
   public masterGain: any;
@@ -309,6 +328,16 @@ export class AudioSpritePlayer {
       return;
     }
 
+    // Throttle support
+    if (options?.throttleMs !== undefined) {
+      const now = Date.now();
+      const lastPlayed = this.lastPlayedTimestamps[soundName] || 0;
+      if (now - lastPlayed < options.throttleMs) {
+        return;
+      }
+      this.lastPlayedTimestamps[soundName] = now;
+    }
+
     // Resume context if it was suspended (must be non-blocking here)
     if (this.audioContext.state === 'suspended') {
       this.audioContext.resume().catch((e: any) => {
@@ -359,9 +388,27 @@ export class AudioSpritePlayer {
       if (loop) {
         // Always use AudioBufferQueueSourceNode
         source = this.audioContext.createBufferQueueSource();
+
+        // Apply pitch/playbackRate if requested
+        if (options?.pitch !== undefined && source.playbackRate) {
+          source.playbackRate.value = options.pitch;
+        }
+
+        // Apply pan if requested and supported
+        let outputNode = targetNode;
+        if (options?.pan !== undefined && this.audioContext.createStereoPanner) {
+          try {
+            const panner = this.audioContext.createStereoPanner();
+            panner.pan.value = options.pan;
+            panner.connect(targetNode);
+            outputNode = panner;
+          } catch (err) {
+            console.warn('Failed to create StereoPannerNode:', err);
+          }
+        }
+
         source.enqueueBuffer(spriteBuffer);
-        // source.connect(this.audioContext.destination);
-        source.connect(targetNode);
+        source.connect(outputNode);
 
         // Manual looping using onEnded
         const loopHandler = () => {
@@ -369,7 +416,7 @@ export class AudioSpritePlayer {
           if (this.loopingSource === source) {
             source.enqueueBuffer(spriteBuffer);
             // Restart the source immediately after re-enqueueing
-            source.start(0);
+            source.start(0, 0);
           }
         };
         source.onEnded = loopHandler;
@@ -378,7 +425,7 @@ export class AudioSpritePlayer {
         if (this.loopingSource) {
           this.loopingSource.stop();
         }
-        source.start(0); // Start immediately
+        source.start(0, 0); // Start immediately
         this.loopingSource = source; // Store reference to looping source
       } else {
         // **NEW: USE POOL FOR NON-LOOPING MOBILE SOUNDS**
@@ -387,13 +434,31 @@ export class AudioSpritePlayer {
 
         // Reconnect to the correct channel (since pooled nodes might have been connected elsewhere)
         source.disconnect();
-        source.connect(targetNode);
+
+        // Apply pitch/playbackRate if requested (or reset it to 1.0)
+        if (source.playbackRate) {
+          source.playbackRate.value = options?.pitch !== undefined ? options.pitch : 1.0;
+        }
+
+        // Apply pan if requested and supported
+        let outputNode = targetNode;
+        if (options?.pan !== undefined && this.audioContext.createStereoPanner) {
+          try {
+            const panner = this.audioContext.createStereoPanner();
+            panner.pan.value = options.pan;
+            panner.connect(targetNode);
+            outputNode = panner;
+          } catch (err) {
+            console.warn('Failed to create StereoPannerNode:', err);
+          }
+        }
+        source.connect(outputNode);
 
         // Must re-enqueue the buffer since the source was reused
         source.enqueueBuffer(spriteBuffer);
 
         // Start immediately (start time 0 for BufferQueueSourceNode means "as soon as possible")
-        source.start(0);
+        source.start(0, 0);
       }
     } else {
       // 🌐 WEB LOGIC (Standard Web Audio API)
@@ -407,8 +472,25 @@ export class AudioSpritePlayer {
       }
 
       source.buffer = spriteBuffer;
-      // source.connect(this.audioContext.destination);
-      source.connect(targetNode);
+
+      // Apply pitch/playbackRate if requested
+      if (options?.pitch !== undefined && source.playbackRate) {
+        source.playbackRate.value = options.pitch;
+      }
+
+      // Apply pan if requested and supported
+      let outputNode = targetNode;
+      if (options?.pan !== undefined && this.audioContext.createStereoPanner) {
+        try {
+          const panner = this.audioContext.createStereoPanner();
+          panner.pan.value = options.pan;
+          panner.connect(targetNode);
+          outputNode = panner;
+        } catch (err) {
+          console.warn('Failed to create StereoPannerNode:', err);
+        }
+      }
+      source.connect(outputNode);
 
       // const loop = sound[2]; // audiosprite stores loop as the third element in the array
       if (loop) {
@@ -441,6 +523,58 @@ export class AudioSpritePlayer {
 
   getAudioBuffer() {
     return this.audioBuffer;
+  }
+
+  /**
+   * Smoothly fades in a background music track over the specified duration.
+   */
+  fadeInMusic(soundName: string, durationMs: number, options?: PlayOptions) {
+    if (!this.musicGain) return;
+
+    // Stop any existing loop first
+    this.stop();
+
+    // Start with volume 0
+    this.musicGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+
+    // Play the music
+    this.play(soundName, {
+      ...options,
+      channel: 'music',
+      loop: true,
+    });
+
+    // Fade to target volume (default to 1.0)
+    const targetVolume = this.musicGain.gain.value > 0 ? this.musicGain.gain.value : 1.0;
+    this.musicGain.gain.linearRampToValueAtTime(
+      targetVolume,
+      this.audioContext.currentTime + durationMs / 1000
+    );
+  }
+
+  /**
+   * Smoothly fades out the background music over the specified duration.
+   */
+  fadeOutMusic(durationMs: number) {
+    if (!this.musicGain || !this.loopingSource) return;
+
+    const sourceToStop = this.loopingSource;
+    const initialVolume = this.musicGain.gain.value;
+
+    this.musicGain.gain.setValueAtTime(initialVolume, this.audioContext.currentTime);
+    this.musicGain.gain.linearRampToValueAtTime(
+      0,
+      this.audioContext.currentTime + durationMs / 1000
+    );
+
+    // Stop the actual source once the fade completes, and restore gain
+    setTimeout(() => {
+      if (this.loopingSource === sourceToStop) {
+        this.stop();
+        // Restore music gain volume for future plays
+        this.musicGain.gain.setValueAtTime(initialVolume, this.audioContext.currentTime);
+      }
+    }, durationMs);
   }
 
   /**
