@@ -252,6 +252,12 @@ export class AudioSpritePlayer {
         this.sourcePool.push(source);
         // console.log('Recycled source. Pool size:', this.sourcePool.length);
       } else {
+        // Explicitly clear callbacks to release JSI values on the JS thread before GC
+        if (this.platform !== 'web') {
+          source.onBufferEnded = null;
+        } else {
+          source.onEnded = null;
+        }
         // If pool is full, let it be garbage collected
         source.disconnect();
         // console.log('Source disconnected (GC candidate).');
@@ -636,6 +642,11 @@ export class AudioSpritePlayer {
    */
   stop() {
     if (this.loopingSource) {
+      if (this.platform !== 'web') {
+        this.loopingSource.onBufferEnded = null;
+      } else {
+        this.loopingSource.onEnded = null;
+      }
       this.loopingSource.stop();
       this.loopingSource = null;
       console.log('RNAS: Looping audio stopped.');
