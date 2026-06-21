@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   ScrollView,
   StatusBar,
+  Switch,
 } from 'react-native';
 import { AudioSpritePlayer } from '../../src';
 import { AudioManager, AudioContext } from 'react-native-audio-api';
@@ -37,6 +38,11 @@ export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [audiouri, setAudiouri] = useState<string | null>(null);
   const playerRef = useRef<AudioSpritePlayer | null>(null);
+
+  // Advanced playback states
+  const [pitch, setPitch] = useState(1.0);
+  const [pan, setPan] = useState(0.0);
+  const [isThrottled, setIsThrottled] = useState(false);
 
   useEffect(() => {
     const loadAudioAsset = async () => {
@@ -107,13 +113,21 @@ export default function App() {
   ) => {
     const player = playerRef.current;
     if (player && isLoaded) {
-      player.play(soundName, options);
+      player.play(soundName, {
+        ...options,
+        pitch: options?.channel === 'music' ? 1.0 : pitch,
+        pan: options?.channel === 'music' ? 0.0 : pan,
+        throttleMs: isThrottled && options?.channel !== 'music' ? 300 : undefined,
+      });
     } else {
       console.warn('Player not loaded.');
     }
   };
 
   const stopBGM = () => playerRef.current?.stop();
+  const fadeInBGM = () => playerRef.current?.fadeInMusic('bg_loop', 1500);
+  const fadeOutBGM = () => playerRef.current?.fadeOutMusic(1500);
+
   const setMusicVolume = (val: number) =>
     playerRef.current?.setMusicVolume(val);
   const setSFXVolume = (val: number) => playerRef.current?.setSFXVolume(val);
@@ -250,6 +264,83 @@ export default function App() {
                 onPress={stopBGM}
                 disabled={!isLoaded}
                 style={styles.flexButton}
+              />
+            </View>
+            <View style={[styles.rowContainer, { marginTop: 12 }]}>
+              <ActionButton
+                title="漸 Fade In (1.5s)"
+                variant="music"
+                onPress={fadeInBGM}
+                disabled={!isLoaded}
+                style={styles.flexButton}
+              />
+              <ActionButton
+                title="消 Fade Out (1.5s)"
+                variant="danger"
+                onPress={fadeOutBGM}
+                disabled={!isLoaded}
+                style={styles.flexButton}
+              />
+            </View>
+          </View>
+
+          {/* ADVANCED PLAYBACK CONTROLS CARD */}
+          <View style={[styles.card, !isLoaded && styles.cardDisabled]}>
+            <Text style={styles.cardTitle}>Advanced SFX Settings</Text>
+
+            {/* Pitch Control */}
+            <View style={styles.sliderRow}>
+              <View style={styles.rowSpaceBetween}>
+                <Text style={styles.sliderLabel}>Pitch / Speed multiplier</Text>
+                <Text style={styles.valueText}>{pitch.toFixed(2)}x</Text>
+              </View>
+              <Slider
+                style={styles.slider}
+                minimumValue={0.5}
+                maximumValue={2.0}
+                step={0.05}
+                value={pitch}
+                minimumTrackTintColor={COLORS.primary}
+                maximumTrackTintColor={COLORS.border}
+                thumbTintColor={COLORS.primary}
+                onValueChange={setPitch}
+                disabled={!isLoaded}
+              />
+            </View>
+
+            {/* Pan Control */}
+            <View style={styles.sliderRow}>
+              <View style={styles.rowSpaceBetween}>
+                <Text style={styles.sliderLabel}>Stereo Pan (Left to Right)</Text>
+                <Text style={styles.valueText}>
+                  {pan === 0.0 ? 'Center' : pan < 0.0 ? `${Math.abs(pan).toFixed(2)} Left` : `${pan.toFixed(2)} Right`}
+                </Text>
+              </View>
+              <Slider
+                style={styles.slider}
+                minimumValue={-1.0}
+                maximumValue={1.0}
+                step={0.1}
+                value={pan}
+                minimumTrackTintColor={COLORS.primary}
+                maximumTrackTintColor={COLORS.border}
+                thumbTintColor={COLORS.primary}
+                onValueChange={setPan}
+                disabled={!isLoaded}
+              />
+            </View>
+
+            {/* Throttle Control */}
+            <View style={[styles.rowSpaceBetween, { marginTop: 8 }]}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={styles.sliderLabel}>SFX Throttle (300ms Cooldown)</Text>
+                <Text style={styles.helperText}>Prevents rapid overlaps</Text>
+              </View>
+              <Switch
+                value={isThrottled}
+                onValueChange={setIsThrottled}
+                disabled={!isLoaded}
+                trackColor={{ false: COLORS.border, true: COLORS.primary }}
               />
             </View>
           </View>
@@ -408,6 +499,11 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontWeight: '600',
     marginBottom: 6,
+  },
+  valueText: {
+    fontSize: 13,
+    color: COLORS.primary,
+    fontWeight: '700',
   },
   slider: {
     width: '100%',

@@ -15,6 +15,12 @@ npm install react-native-audiosprites
 yarn add react-native-audiosprites
 ```
 
+## Compatibility
+
+This library supports:
+* **Expo SDK 56**
+* **React Native Audio API** (`react-native-audio-api`) `0.12.x` (12.x.x) or higher
+
 ## Usage
 
 First, you need to generate an audio sprite and a JSON manifest file using the `audiosprite` tool.
