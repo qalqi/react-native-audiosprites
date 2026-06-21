@@ -16,6 +16,7 @@ import { Asset } from 'expo-asset';
 import { fetch } from 'expo/fetch';
 import manifest from '../assets/mygameaudio.json';
 import Slider from '@react-native-community/slider';
+import { Canvas, Path } from '@shopify/react-native-skia';
 
 // Assuming the audio asset is locally available
 const audioAsset = require('../assets/mygameaudio.mp3');
@@ -32,6 +33,65 @@ const COLORS = {
   musicDisabled: '#A7F3D0',
   danger: '#EF4444',
   border: '#E5E7EB',
+  canvasBg: '#111827',
+};
+
+// --- VISUALIZER COMPONENT ---
+interface VisualizerProps {
+  analyserRef: React.MutableRefObject<any>;
+}
+
+const Visualizer = ({ analyserRef }: VisualizerProps) => {
+  const [svgPathString, setSvgPathString] = useState<string>('M 0 50 L 10 50');
+  const animationFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const tick = () => {
+      if (analyserRef.current) {
+        const { analyser, dataArray, bufferLength } = analyserRef.current;
+        analyser.getByteFrequencyData(dataArray);
+
+        const canvasHeight = 100;
+        const paddingBottom = 10;
+        const barWidth = 6;
+        const gap = 4;
+        const startX = 12;
+
+        let pathBuilderString = '';
+
+        for (let i = 0; i < bufferLength; i++) {
+          const value = dataArray[i];
+          const percent = value / 255;
+          const barHeight = percent * (canvasHeight - paddingBottom * 2);
+
+          const x = startX + i * (barWidth + gap);
+          const y = canvasHeight - paddingBottom - barHeight;
+          const heightComputed = Math.max(barHeight, 2);
+
+          pathBuilderString += ` M ${x} ${y} h ${barWidth} v ${heightComputed} h -${barWidth} Z`;
+        }
+
+        if (pathBuilderString) {
+          setSvgPathString(pathBuilderString);
+        }
+      }
+      animationFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [analyserRef]);
+
+  return (
+    <Canvas style={styles.visualizerCanvas}>
+      <Path path={svgPathString} color={COLORS.music} />
+    </Canvas>
+  );
 };
 
 export default function App() {
@@ -43,6 +103,14 @@ export default function App() {
   const [pitch, setPitch] = useState(1.0);
   const [pan, setPan] = useState(0.0);
   const [isThrottled, setIsThrottled] = useState(false);
+
+  // Volume states for synchronization
+  const [masterVolume, setMasterVolumeState] = useState(1.0);
+  const [musicVolume, setMusicVolumeState] = useState(1.0);
+  const [sfxVolume, setSfxVolumeState] = useState(1.0);
+
+  // --- VISUALIZER REFERENCE ---
+  const analyserRef = useRef<any>(null);
 
   useEffect(() => {
     const loadAudioAsset = async () => {
@@ -66,6 +134,12 @@ export default function App() {
   }, []);
 
   const loadPlayer = async () => {
+    console.log(
+      'APP: loadPlayer called, audiouri=',
+      audiouri,
+      'isLoaded=',
+      isLoaded
+    );
     if (!audiouri || isLoaded) {
       console.warn('Audio URI not ready or player already loaded.');
       return;
@@ -89,11 +163,28 @@ export default function App() {
     }
 
     const audioContext = new AudioContext();
+
+    // Setup standard AnalyserNode
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 64;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    analyserRef.current = { analyser, dataArray, bufferLength };
+
     const audioPlayer = new AudioSpritePlayer({
       audioContext,
       fetch: fetch.bind(globalThis),
       platform: Platform.OS,
     });
+
+    // Safely insert AnalyserNode into the playback routing chain
+    try {
+      audioPlayer.masterGain.disconnect();
+      audioPlayer.masterGain.connect(analyser);
+      analyser.connect(audioContext.destination);
+    } catch (err) {
+      console.warn('Failed to route masterGain through AnalyserNode:', err);
+    }
 
     audioPlayer
       .load(manifest, audiouri)
@@ -117,7 +208,8 @@ export default function App() {
         ...options,
         pitch: options?.channel === 'music' ? 1.0 : pitch,
         pan: options?.channel === 'music' ? 0.0 : pan,
-        throttleMs: isThrottled && options?.channel !== 'music' ? 300 : undefined,
+        throttleMs:
+          isThrottled && options?.channel !== 'music' ? 300 : undefined,
       });
     } else {
       console.warn('Player not loaded.');
@@ -128,11 +220,17 @@ export default function App() {
   const fadeInBGM = () => playerRef.current?.fadeInMusic('bg_loop', 1500);
   const fadeOutBGM = () => playerRef.current?.fadeOutMusic(1500);
 
-  const setMusicVolume = (val: number) =>
+  const setMusicVolume = (val: number) => {
     playerRef.current?.setMusicVolume(val);
-  const setSFXVolume = (val: number) => playerRef.current?.setSFXVolume(val);
+    setMusicVolumeState(val);
+  };
+  const setSFXVolume = (val: number) => {
+    playerRef.current?.setSFXVolume(val);
+    setSfxVolumeState(val);
+  };
   const setMasterVolume = (val: number) => {
     if (playerRef.current) playerRef.current.volume = val;
+    setMasterVolumeState(val);
   };
 
   // --- REUSABLE UI COMPONENTS ---
@@ -165,7 +263,7 @@ export default function App() {
     );
   };
 
-  const VolumeSlider = ({ label, onValueChange }: any) => (
+  const VolumeSlider = ({ label, onValueChange, value }: any) => (
     <View style={styles.sliderRow}>
       <Text style={styles.sliderLabel}>{label}</Text>
       <Slider
@@ -173,7 +271,7 @@ export default function App() {
         minimumValue={0}
         maximumValue={1}
         step={0.05}
-        value={1}
+        value={value}
         minimumTrackTintColor={COLORS.primary}
         maximumTrackTintColor={COLORS.border}
         thumbTintColor={COLORS.primary}
@@ -217,6 +315,14 @@ export default function App() {
                 onPress={loadPlayer}
                 disabled={!audiouri}
               />
+            </View>
+          )}
+
+          {/* LIVE SPECTRUM VISUALIZER CARD */}
+          {isLoaded && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Live Spectrum Visualizer</Text>
+              <Visualizer analyserRef={analyserRef} />
             </View>
           )}
 
@@ -311,9 +417,15 @@ export default function App() {
             {/* Pan Control */}
             <View style={styles.sliderRow}>
               <View style={styles.rowSpaceBetween}>
-                <Text style={styles.sliderLabel}>Stereo Pan (Left to Right)</Text>
+                <Text style={styles.sliderLabel}>
+                  Stereo Pan (Left to Right)
+                </Text>
                 <Text style={styles.valueText}>
-                  {pan === 0.0 ? 'Center' : pan < 0.0 ? `${Math.abs(pan).toFixed(2)} Left` : `${pan.toFixed(2)} Right`}
+                  {pan === 0.0
+                    ? 'Center'
+                    : pan < 0.0
+                      ? `${Math.abs(pan).toFixed(2)} Left`
+                      : `${pan.toFixed(2)} Right`}
                 </Text>
               </View>
               <Slider
@@ -333,7 +445,9 @@ export default function App() {
             {/* Throttle Control */}
             <View style={[styles.rowSpaceBetween, { marginTop: 8 }]}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={styles.sliderLabel}>SFX Throttle (300ms Cooldown)</Text>
+                <Text style={styles.sliderLabel}>
+                  SFX Throttle (300ms Cooldown)
+                </Text>
                 <Text style={styles.helperText}>Prevents rapid overlaps</Text>
               </View>
               <Switch
@@ -366,9 +480,21 @@ export default function App() {
               </View>
             </View>
 
-            <VolumeSlider label="Master" onValueChange={setMasterVolume} />
-            <VolumeSlider label="Music" onValueChange={setMusicVolume} />
-            <VolumeSlider label="SFX" onValueChange={setSFXVolume} />
+            <VolumeSlider
+              label="Master"
+              value={masterVolume}
+              onValueChange={setMasterVolume}
+            />
+            <VolumeSlider
+              label="Music"
+              value={musicVolume}
+              onValueChange={setMusicVolume}
+            />
+            <VolumeSlider
+              label="SFX"
+              value={sfxVolume}
+              onValueChange={setSFXVolume}
+            />
           </View>
         </View>
       </ScrollView>
@@ -431,6 +557,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  visualizerCanvas: {
+    width: '100%',
+    height: 100,
+    backgroundColor: COLORS.canvasBg,
+    borderRadius: 8,
   },
   helperText: {
     color: COLORS.textSecondary,
