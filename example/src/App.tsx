@@ -175,6 +175,7 @@ export default function App() {
       audioContext,
       fetch: fetch.bind(globalThis),
       platform: Platform.OS,
+      debug: true,
     });
 
     // Safely insert AnalyserNode into the playback routing chain

@@ -47,12 +47,20 @@ export interface PlayOptions {
   throttleMs?: number;
 }
 
+export interface AudioSpritePlayerConfig {
+  audioContext: any | null;
+  fetch: any;
+  platform: string;
+  debug?: boolean;
+}
+
 export class AudioSpritePlayer {
   audioContext: any | null;
   fetch: any | null;
   audioBuffer: any | null; // The full audio buffer
   manifest: any | null;
   platform: string;
+  private debug: boolean;
   // Cache for the small, pre-split AudioBuffers used by mobile's QueueSourceNode
   private spriteBufferCache: Record<string, any> = {};
   private loopingSource: any | null = null;
@@ -69,11 +77,9 @@ export class AudioSpritePlayer {
     audioContext,
     fetch,
     platform,
-  }: {
-    audioContext: any | null;
-    fetch: any;
-    platform: string;
-  }) {
+    debug = false,
+  }: AudioSpritePlayerConfig) {
+    this.debug = debug;
     if (!audioContext) {
       if (platform === 'web') {
         // Web doesnt need to provide AudioContext
@@ -97,7 +103,7 @@ export class AudioSpritePlayer {
       this.audioContext?.createBufferSource?.constructor?.name ===
       'AsyncFunction'
     ) {
-      console.log(
+      this.log(
         'createBufferSource is async! going with web default AudioContext'
       );
       // Can be removed after this PR gets merged
@@ -119,6 +125,12 @@ export class AudioSpritePlayer {
     this.musicGain = this.audioContext.createGain();
     this.musicGain.gain.value = 1.0;
     this.musicGain.connect(this.masterGain); // Connect to Master
+  }
+
+  private log(message: string, ...optionalParams: any[]) {
+    if (this.debug) {
+      console.log(message, ...optionalParams);
+    }
   }
 
   /**
@@ -186,7 +198,7 @@ export class AudioSpritePlayer {
       }
 
       this.spriteBufferCache[soundName] = spriteBuffer;
-      console.log(
+      this.log(
         `RNAS: Cached sprite buffer for ${soundName}, frames: ${durationFrames}`
       );
       const ch0 = spriteBuffer.getChannelData(0);
@@ -195,7 +207,7 @@ export class AudioSpritePlayer {
         const v = Math.abs(ch0[i]);
         if (v > maxVal) maxVal = v;
       }
-      console.log(
+      this.log(
         `RNAS: Sprite ${soundName} max amplitude (first 1000): ${maxVal}`
       );
     }
@@ -232,7 +244,7 @@ export class AudioSpritePlayer {
         return null;
       }
       source = this.audioContext.createBufferQueueSource();
-      console.log('RNAS: Created new BufferQueueSource.');
+      this.log('RNAS: Created new BufferQueueSource.');
       // source.connect(this.audioContext.destination);
       // console.log('Created new source. Pool size:', this.sourcePool.length);
     } else {
@@ -347,7 +359,7 @@ export class AudioSpritePlayer {
       // 🚨 CRITICAL: Split and cache buffers for mobile stability/correctness
       this._cacheSpriteBuffers();
 
-      console.log('RNAS: Audio sprite loaded successfully.');
+      this.log('RNAS: Audio sprite loaded successfully.');
     } catch (error) {
       console.error('Failed to load audio sprite:', error);
       throw error; // Re-throw for user to catch
@@ -355,7 +367,7 @@ export class AudioSpritePlayer {
   }
 
   async play(soundName: string, options?: PlayOptions) {
-    console.log(
+    this.log(
       `RNAS play(): ${soundName} on ${this.platform}, contextState=${this.audioContext?.state}`
     );
     if (!this.audioBuffer || !this.manifest) {
@@ -376,7 +388,7 @@ export class AudioSpritePlayer {
     // Resume context if it was suspended
     if (this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
-      console.log('RNAS: After resume, contextState=', this.audioContext.state);
+      this.log('RNAS: After resume, contextState=', this.audioContext.state);
     }
 
     const sound = this.manifest.sprite[soundName];
@@ -422,7 +434,7 @@ export class AudioSpritePlayer {
       if (loop) {
         // Always use AudioBufferQueueSourceNode
         source = this.audioContext.createBufferQueueSource();
-        console.log('RNAS: Created looping BufferQueueSource');
+        this.log('RNAS: Created looping BufferQueueSource');
 
         // Apply pitch/playbackRate if requested
         if (options?.pitch !== undefined && source.playbackRate) {
@@ -446,9 +458,9 @@ export class AudioSpritePlayer {
         }
 
         source.enqueueBuffer(spriteBuffer);
-        console.log('RNAS: Enqueued buffer for looping source');
+        this.log('RNAS: Enqueued buffer for looping source');
         source.connect(outputNode);
-        console.log('RNAS: Connected looping source to output');
+        this.log('RNAS: Connected looping source to output');
 
         // Manual looping using onEnded/onBufferEnded
         const loopHandler = () => {
@@ -470,7 +482,7 @@ export class AudioSpritePlayer {
           this.loopingSource.stop();
         }
         source.start(0, 0); // Start immediately
-        console.log('RNAS: Started looping source');
+        this.log('RNAS: Started looping source');
         this.loopingSource = source; // Store reference to looping source
       } else {
         // **NEW: USE POOL FOR NON-LOOPING MOBILE SOUNDS**
@@ -502,15 +514,15 @@ export class AudioSpritePlayer {
           }
         }
         source.connect(outputNode);
-        console.log('RNAS: Connected pooled source to output');
+        this.log('RNAS: Connected pooled source to output');
 
         // Must re-enqueue the buffer since the source was reused
         source.enqueueBuffer(spriteBuffer);
-        console.log('RNAS: Enqueued buffer for pooled source');
+        this.log('RNAS: Enqueued buffer for pooled source');
 
         // Start immediately (start time 0 for BufferQueueSourceNode means "as soon as possible")
         source.start(0, 0);
-        console.log('RNAS: Started pooled source');
+        this.log('RNAS: Started pooled source');
       }
     } else {
       // 🌐 WEB LOGIC (Standard Web Audio API)
@@ -566,7 +578,7 @@ export class AudioSpritePlayer {
       }
     }
 
-    console.log(`RNAS: played ${soundName} on ${this.platform}`);
+    this.log(`RNAS: played ${soundName} on ${this.platform}`);
   }
 
   getManifest() {
@@ -649,9 +661,9 @@ export class AudioSpritePlayer {
       }
       this.loopingSource.stop();
       this.loopingSource = null;
-      console.log('RNAS: Looping audio stopped.');
+      this.log('RNAS: Looping audio stopped.');
     } else {
-      console.log('RNAS: No looping audio to stop.');
+      this.log('RNAS: No looping audio to stop.');
     }
   }
 
