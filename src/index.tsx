@@ -52,6 +52,7 @@ export interface AudioSpritePlayerConfig {
   fetch: any;
   platform: string;
   debug?: boolean;
+  maxPoolSize?: number;
 }
 
 export class AudioSpritePlayer {
@@ -65,7 +66,7 @@ export class AudioSpritePlayer {
   private spriteBufferCache: Record<string, any> = {};
   private loopingSource: any | null = null;
   private sourcePool: any[] = []; // NEW: Pool for non-looping sources
-  private maxPoolSize: number = 5; // Adjust this based on testing (5 is a good start)
+  private maxPoolSize: number;
   private lastPlayedTimestamps: Record<string, number> = {};
 
   // NEW: The Mixer
@@ -78,8 +79,10 @@ export class AudioSpritePlayer {
     fetch,
     platform,
     debug = false,
+    maxPoolSize = 5,
   }: AudioSpritePlayerConfig) {
     this.debug = debug;
+    this.maxPoolSize = maxPoolSize;
     if (!audioContext) {
       if (platform === 'web') {
         // Web doesnt need to provide AudioContext

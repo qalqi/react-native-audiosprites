@@ -151,6 +151,22 @@ describe('@audiosprites/player (Web)', () => {
     expect(musicGain.connect).toHaveBeenCalledWith(masterGain);
   });
 
+  it('constructor() should set debug and maxPoolSize with defaults or user config', () => {
+    expect((player as any).debug).toBe(false);
+    expect((player as any).maxPoolSize).toBe(5);
+
+    const customPlayer = new AudioSpritePlayerClass({
+      audioContext: audioContext as any,
+      fetch: mockFetch,
+      platform: 'web',
+      debug: true,
+      maxPoolSize: 10,
+    });
+
+    expect((customPlayer as any).debug).toBe(true);
+    expect((customPlayer as any).maxPoolSize).toBe(10);
+  });
+
   it('volume setters should call setTargetAtTime on gain nodes', () => {
     // Master Volume
     player.volume = 0.5;
