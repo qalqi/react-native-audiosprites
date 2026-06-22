@@ -21,4 +21,3 @@ module.exports = function (api) {
     { root, pkg }
   );
 };
-
