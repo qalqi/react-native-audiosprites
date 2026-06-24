@@ -26,7 +26,8 @@
     "strict": true,
     "target": "ESNext",
     "verbatimModuleSyntax": true,
-    "typeRoots": ["./node_modules/@types", "./types"]
+    "typeRoots": ["./node_modules/@types", "./types"],
+    "types": ["jest", "node"]
   },
   "include": ["src", "__tests__", "types/**/*.d.ts"],
   "exclude": ["lib"]

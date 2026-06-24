@@ -77,6 +77,7 @@ class MockAudioContext {
 class MockBufferQueueSourceNode {
   context: MockAudioContext;
   onEnded: (() => void) | null = null;
+  onBufferEnded: (() => void) | null = null;
   playbackRate = { value: 1 };
   constructor(ctx: MockAudioContext) {
     this.context = ctx;
@@ -148,6 +149,22 @@ describe('@audiosprites/player (Web)', () => {
     // Channels -> Master
     expect(sfxGain.connect).toHaveBeenCalledWith(masterGain);
     expect(musicGain.connect).toHaveBeenCalledWith(masterGain);
+  });
+
+  it('constructor() should set debug and maxPoolSize with defaults or user config', () => {
+    expect((player as any).debug).toBe(false);
+    expect((player as any).maxPoolSize).toBe(5);
+
+    const customPlayer = new AudioSpritePlayerClass({
+      audioContext: audioContext as any,
+      fetch: mockFetch,
+      platform: 'web',
+      debug: true,
+      maxPoolSize: 10,
+    });
+
+    expect((customPlayer as any).debug).toBe(true);
+    expect((customPlayer as any).maxPoolSize).toBe(10);
   });
 
   it('volume setters should call setTargetAtTime on gain nodes', () => {
@@ -367,12 +384,24 @@ describe('@audiosprites/player (Web)', () => {
 
     player.fadeInMusic('bg_loop', 1000);
     const musicGain = (player as any).musicGain;
-    expect(musicGain.gain.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
-    expect(musicGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(1.0, expect.any(Number));
+    expect(musicGain.gain.setValueAtTime).toHaveBeenCalledWith(
+      0,
+      expect.any(Number)
+    );
+    expect(musicGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(
+      1.0,
+      expect.any(Number)
+    );
 
     player.fadeOutMusic(1000);
-    expect(musicGain.gain.setValueAtTime).toHaveBeenCalledWith(1.0, expect.any(Number));
-    expect(musicGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(musicGain.gain.setValueAtTime).toHaveBeenCalledWith(
+      1.0,
+      expect.any(Number)
+    );
+    expect(musicGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(
+      0,
+      expect.any(Number)
+    );
 
     // Fast-forward to let the fade out setTimeout complete
     jest.advanceTimersByTime(1000);
@@ -429,10 +458,10 @@ describe('@audiosprites/player (Mobile)', () => {
       const mockSource = mockSourceResult.value;
       expect(mockSource.enqueueBuffer).toHaveBeenCalledTimes(1);
       expect(mockSource.start).toHaveBeenCalledWith(0, 0);
-      expect(mockSource.onEnded).toBeInstanceOf(Function);
+      expect(mockSource.onBufferEnded).toBeInstanceOf(Function);
 
-      // Simulate the onEnded callback being called
-      mockSource.onEnded();
+      // Simulate the onBufferEnded callback being called
+      mockSource.onBufferEnded();
 
       // Expect enqueueBuffer and start to be called again for looping
       expect(mockSource.enqueueBuffer).toHaveBeenCalledTimes(2);
